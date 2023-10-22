@@ -135,6 +135,7 @@ public class FlutterView extends FrameLayout
   @Nullable private AndroidTouchProcessor androidTouchProcessor;
   @Nullable private AccessibilityBridge accessibilityBridge;
   @Nullable private TextServicesManager textServicesManager;
+  @Nullable private FlutterUiDisplayListener pendingRevertImageViewListener;
 
   // Provides access to foldable/hinge information
   @Nullable private WindowInfoRepositoryCallbackAdapterWrapper windowInfoRepo;
@@ -1326,6 +1327,10 @@ public class FlutterView extends FrameLayout
    * Otherwise, it resizes the {@link FlutterImageView} based on the current view size.
    */
   public void convertToImageView() {
+    if (pendingRevertImageViewListener != null) {
+      pendingRevertImageViewListener.onFlutterUiDisplayed();
+      pendingRevertImageViewListener = null;
+    }
     renderSurface.pause();
 
     if (flutterImageView == null) {
@@ -1375,10 +1380,11 @@ public class FlutterView extends FrameLayout
 
     // Install a Flutter UI listener to wait until the first frame is rendered
     // in the new surface to call the `onDone` callback.
-    renderer.addIsDisplayingFlutterUiListener(
+    pendingRevertImageViewListener =
         new FlutterUiDisplayListener() {
           @Override
           public void onFlutterUiDisplayed() {
+            pendingRevertImageViewListener = null;
             renderer.removeIsDisplayingFlutterUiListener(this);
             onDone.run();
             if (!(renderSurface instanceof FlutterImageView) && flutterImageView != null) {
@@ -1391,7 +1397,8 @@ public class FlutterView extends FrameLayout
           public void onFlutterUiNoLongerDisplayed() {
             // no-op
           }
-        });
+        };
+    renderer.addIsDisplayingFlutterUiListener(pendingRevertImageViewListener, false);
   }
 
   public void attachOverlaySurfaceToRender(@NonNull FlutterImageView view) {

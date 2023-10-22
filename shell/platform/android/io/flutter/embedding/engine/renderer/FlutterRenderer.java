@@ -102,9 +102,19 @@ public class FlutterRenderer implements TextureRegistry {
    * pixels to an Android {@code View} hierarchy.
    */
   public void addIsDisplayingFlutterUiListener(@NonNull FlutterUiDisplayListener listener) {
+    addIsDisplayingFlutterUiListener(listener, true);
+  }
+
+  /**
+   * Adds a listener that is invoked whenever this {@code FlutterRenderer} starts and stops painting
+   * pixels to an Android {@code View} hierarchy. If {@code fireImmediately} is true and the Flutter
+   * UI is currently being displayed, the listener will be triggered immediately.
+   */
+  public void addIsDisplayingFlutterUiListener(
+      @NonNull FlutterUiDisplayListener listener, boolean fireImmediately) {
     flutterJNI.addIsDisplayingFlutterUiListener(listener);
 
-    if (isDisplayingFlutterUi) {
+    if (isDisplayingFlutterUi && fireImmediately) {
       listener.onFlutterUiDisplayed();
     }
   }
