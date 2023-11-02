@@ -1,4 +1,4 @@
-Signature: 87bded776e4111cd3ff856b2089f0d53
+Signature: 31caaa1a6b22100306dd9d07dc18cb1d
 
 ====================================================================================================
 LIBRARY: etc1
@@ -386,15 +386,6 @@ FILE: ../../../third_party/skia/modules/pathkit/perf/pathops.bench.js
 FILE: ../../../third_party/skia/modules/pathkit/perf/perfReporter.js
 FILE: ../../../third_party/skia/modules/skparagraph/test.html
 FILE: ../../../third_party/skia/package-lock.json
-FILE: ../../../third_party/skia/relnotes/base64.md
-FILE: ../../../third_party/skia/relnotes/font-default.md
-FILE: ../../../third_party/skia/relnotes/glbackendsemaphore.md
-FILE: ../../../third_party/skia/relnotes/grsurface-info.md
-FILE: ../../../third_party/skia/relnotes/mesh.md
-FILE: ../../../third_party/skia/relnotes/readbuffer-deserial.md
-FILE: ../../../third_party/skia/relnotes/recorder-static-member.md
-FILE: ../../../third_party/skia/relnotes/typeface.md
-FILE: ../../../third_party/skia/relnotes/vk-directcontext.md
 FILE: ../../../third_party/skia/src/gpu/gpu_workaround_list.txt
 FILE: ../../../third_party/skia/src/ports/fontations/Cargo.toml
 FILE: ../../../third_party/skia/src/sksl/generated/sksl_compute.minified.sksl
@@ -5435,6 +5426,7 @@ ORIGIN: ../../../third_party/skia/fuzz/FuzzEncoders.cpp + ../../../third_party/s
 ORIGIN: ../../../third_party/skia/fuzz/FuzzPolyUtils.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/canvaskit/canvaskit_bindings.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/pathkit/pathkit_wasm_bindings.cpp + ../../../third_party/skia/LICENSE
+ORIGIN: ../../../third_party/skia/modules/skcms/src/skcms_Transform.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/base/SkNoDestructor.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/core/SkGlyph.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/core/SkTypeface_remote.cpp + ../../../third_party/skia/LICENSE
@@ -5443,6 +5435,7 @@ FILE: ../../../third_party/skia/fuzz/FuzzEncoders.cpp
 FILE: ../../../third_party/skia/fuzz/FuzzPolyUtils.cpp
 FILE: ../../../third_party/skia/modules/canvaskit/canvaskit_bindings.cpp
 FILE: ../../../third_party/skia/modules/pathkit/pathkit_wasm_bindings.cpp
+FILE: ../../../third_party/skia/modules/skcms/src/skcms_Transform.h
 FILE: ../../../third_party/skia/src/base/SkNoDestructor.h
 FILE: ../../../third_party/skia/src/core/SkGlyph.cpp
 FILE: ../../../third_party/skia/src/core/SkTypeface_remote.cpp
@@ -6202,16 +6195,6 @@ ORIGIN: ../../../third_party/skia/gm/swizzle.cpp + ../../../third_party/skia/LIC
 ORIGIN: ../../../third_party/skia/gm/tilemodes_alpha.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/include/core/SkPathTypes.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/skparagraph/bench/ParagraphBench.cpp + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/app/editor_application.cpp + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/include/editor.h + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/include/stringslice.h + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/include/stringview.h + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/src/editor.cpp + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/src/shape.cpp + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/src/shape.h + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/src/stringslice.cpp + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/src/word_boundaries.cpp + ../../../third_party/skia/LICENSE
-ORIGIN: ../../../third_party/skia/modules/skplaintexteditor/src/word_boundaries.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/base/SkContainers.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/base/SkMalloc.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/core/SkPixelRefPriv.h + ../../../third_party/skia/LICENSE
@@ -6241,16 +6224,6 @@ FILE: ../../../third_party/skia/gm/swizzle.cpp
 FILE: ../../../third_party/skia/gm/tilemodes_alpha.cpp
 FILE: ../../../third_party/skia/include/core/SkPathTypes.h
 FILE: ../../../third_party/skia/modules/skparagraph/bench/ParagraphBench.cpp
-FILE: ../../../third_party/skia/modules/skplaintexteditor/app/editor_application.cpp
-FILE: ../../../third_party/skia/modules/skplaintexteditor/include/editor.h
-FILE: ../../../third_party/skia/modules/skplaintexteditor/include/stringslice.h
-FILE: ../../../third_party/skia/modules/skplaintexteditor/include/stringview.h
-FILE: ../../../third_party/skia/modules/skplaintexteditor/src/editor.cpp
-FILE: ../../../third_party/skia/modules/skplaintexteditor/src/shape.cpp
-FILE: ../../../third_party/skia/modules/skplaintexteditor/src/shape.h
-FILE: ../../../third_party/skia/modules/skplaintexteditor/src/stringslice.cpp
-FILE: ../../../third_party/skia/modules/skplaintexteditor/src/word_boundaries.cpp
-FILE: ../../../third_party/skia/modules/skplaintexteditor/src/word_boundaries.h
 FILE: ../../../third_party/skia/src/base/SkContainers.cpp
 FILE: ../../../third_party/skia/src/base/SkMalloc.cpp
 FILE: ../../../third_party/skia/src/core/SkPixelRefPriv.h
@@ -8637,6 +8610,8 @@ ORIGIN: ../../../third_party/skia/src/codec/SkJpegXmp.h + ../../../third_party/s
 ORIGIN: ../../../third_party/skia/src/codec/SkTiffUtility.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/codec/SkTiffUtility.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/codec/SkXmp.cpp + ../../../third_party/skia/LICENSE
+ORIGIN: ../../../third_party/skia/src/core/SkMipmapDrawDownSampler.cpp + ../../../third_party/skia/LICENSE
+ORIGIN: ../../../third_party/skia/src/core/SkMipmapHQDownSampler.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/core/SkRasterPipelineContextUtils.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/core/SkRasterPipelineOpContexts.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/core/SkRasterPipelineOpList.h + ../../../third_party/skia/LICENSE
@@ -8681,6 +8656,8 @@ FILE: ../../../third_party/skia/src/codec/SkJpegXmp.h
 FILE: ../../../third_party/skia/src/codec/SkTiffUtility.cpp
 FILE: ../../../third_party/skia/src/codec/SkTiffUtility.h
 FILE: ../../../third_party/skia/src/codec/SkXmp.cpp
+FILE: ../../../third_party/skia/src/core/SkMipmapDrawDownSampler.cpp
+FILE: ../../../third_party/skia/src/core/SkMipmapHQDownSampler.cpp
 FILE: ../../../third_party/skia/src/core/SkRasterPipelineContextUtils.h
 FILE: ../../../third_party/skia/src/core/SkRasterPipelineOpContexts.h
 FILE: ../../../third_party/skia/src/core/SkRasterPipelineOpList.h
@@ -8792,12 +8769,14 @@ ORIGIN: ../../../third_party/skia/modules/bentleyottmann/include/EventQueueInter
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/include/Int96.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/include/Point.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/include/Segment.h + ../../../third_party/skia/LICENSE
+ORIGIN: ../../../third_party/skia/modules/bentleyottmann/include/SweepLine.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/BentleyOttmann1.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/BruteForceCrossings.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/EventQueue.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/Int96.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/Point.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/Segment.cpp + ../../../third_party/skia/LICENSE
+ORIGIN: ../../../third_party/skia/modules/bentleyottmann/src/SweepLine.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/base/SkBezierCurves.h + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/base/SkCubics.cpp + ../../../third_party/skia/LICENSE
 ORIGIN: ../../../third_party/skia/src/base/SkCubics.h + ../../../third_party/skia/LICENSE
@@ -9063,12 +9042,14 @@ FILE: ../../../third_party/skia/modules/bentleyottmann/include/EventQueueInterfa
 FILE: ../../../third_party/skia/modules/bentleyottmann/include/Int96.h
 FILE: ../../../third_party/skia/modules/bentleyottmann/include/Point.h
 FILE: ../../../third_party/skia/modules/bentleyottmann/include/Segment.h
+FILE: ../../../third_party/skia/modules/bentleyottmann/include/SweepLine.h
 FILE: ../../../third_party/skia/modules/bentleyottmann/src/BentleyOttmann1.cpp
 FILE: ../../../third_party/skia/modules/bentleyottmann/src/BruteForceCrossings.cpp
 FILE: ../../../third_party/skia/modules/bentleyottmann/src/EventQueue.cpp
 FILE: ../../../third_party/skia/modules/bentleyottmann/src/Int96.cpp
 FILE: ../../../third_party/skia/modules/bentleyottmann/src/Point.cpp
 FILE: ../../../third_party/skia/modules/bentleyottmann/src/Segment.cpp
+FILE: ../../../third_party/skia/modules/bentleyottmann/src/SweepLine.cpp
 FILE: ../../../third_party/skia/src/base/SkBezierCurves.h
 FILE: ../../../third_party/skia/src/base/SkCubics.cpp
 FILE: ../../../third_party/skia/src/base/SkCubics.h
