@@ -286,7 +286,8 @@ static EntityPassTarget CreateRenderTarget(ContentContext& renderer,
   }
 
   return EntityPassTarget(
-      target, renderer.GetDeviceCapabilities().SupportsReadFromResolve());
+      target, renderer.GetDeviceCapabilities().SupportsReadFromResolve(),
+      renderer.GetDeviceCapabilities().SupportsImplicitResolvingMSAA());
 }
 
 uint32_t EntityPass::GetTotalPassReads(ContentContext& renderer) const {
@@ -397,7 +398,10 @@ bool EntityPass::Render(ContentContext& renderer,
         entity.SetContents(contents);
         entity.SetBlendMode(BlendMode::kSource);
 
-        entity.Render(renderer, *render_pass);
+        if (!entity.Render(renderer, *render_pass)) {
+          VALIDATION_LOG << "Failed to render EntityPass root blit.";
+          return false;
+        }
       }
 
       if (!render_pass->EncodeCommands()) {
@@ -455,7 +459,8 @@ bool EntityPass::Render(ContentContext& renderer,
 
   EntityPassTarget pass_target(
       root_render_target,
-      renderer.GetDeviceCapabilities().SupportsReadFromResolve());
+      renderer.GetDeviceCapabilities().SupportsReadFromResolve(),
+      renderer.GetDeviceCapabilities().SupportsImplicitResolvingMSAA());
 
   return OnRender(                               //
       renderer,                                  // renderer
@@ -569,11 +574,11 @@ EntityPass::EntityResult EntityPass::GetEntityForElement(
 
     // The maximum coverage of the subpass. Subpasses textures should never
     // extend outside the parent pass texture or the current clip coverage.
-    auto coverage_limit =
-        Rect(global_pass_position, Size(pass_context.GetPassTarget()
-                                            .GetRenderTarget()
-                                            .GetRenderTargetSize()))
-            .Intersection(clip_coverage_back.value());
+    auto coverage_limit = Rect::MakeOriginSize(global_pass_position,
+                                               Size(pass_context.GetPassTarget()
+                                                        .GetRenderTarget()
+                                                        .GetRenderTargetSize()))
+                              .Intersection(clip_coverage_back.value());
     if (!coverage_limit.has_value()) {
       capture.CreateChild("Subpass Entity (Skipped: Empty coverage limit A)");
       return EntityPass::EntityResult::Skip();

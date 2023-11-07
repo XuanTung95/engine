@@ -744,10 +744,10 @@ TEST(GeometryTest, CanConvertTTypesExplicitly) {
   {
     Rect r1 = Rect::MakeXYWH(1.0, 2.0, 3.0, 4.0);
     IRect r2 = static_cast<IRect>(r1);
-    ASSERT_EQ(r2.origin.x, 1u);
-    ASSERT_EQ(r2.origin.y, 2u);
-    ASSERT_EQ(r2.size.width, 3u);
-    ASSERT_EQ(r2.size.height, 4u);
+    ASSERT_EQ(r2.GetOrigin().x, 1u);
+    ASSERT_EQ(r2.GetOrigin().y, 2u);
+    ASSERT_EQ(r2.GetSize().width, 3u);
+    ASSERT_EQ(r2.GetSize().height, 4u);
   }
 }
 
@@ -1577,36 +1577,6 @@ TEST(GeometryTest, CanConvertBetweenDegressAndRadians) {
     auto deg = Degrees{90.0};
     Radians rad = deg;
     ASSERT_FLOAT_EQ(rad.radians, kPiOver2);
-  }
-}
-
-TEST(GeometryTest, RectMakeSize) {
-  {
-    Size s(100, 200);
-    Rect r = Rect::MakeSize(s);
-    Rect expected = Rect::MakeLTRB(0, 0, 100, 200);
-    ASSERT_RECT_NEAR(r, expected);
-  }
-
-  {
-    ISize s(100, 200);
-    Rect r = Rect::MakeSize(s);
-    Rect expected = Rect::MakeLTRB(0, 0, 100, 200);
-    ASSERT_RECT_NEAR(r, expected);
-  }
-
-  {
-    Size s(100, 200);
-    IRect r = IRect::MakeSize(s);
-    IRect expected = IRect::MakeLTRB(0, 0, 100, 200);
-    ASSERT_EQ(r, expected);
-  }
-
-  {
-    ISize s(100, 200);
-    IRect r = IRect::MakeSize(s);
-    IRect expected = IRect::MakeLTRB(0, 0, 100, 200);
-    ASSERT_EQ(r, expected);
   }
 }
 
