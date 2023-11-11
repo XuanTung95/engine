@@ -16,6 +16,7 @@ import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
 import android.util.AttributeSet;
+import android.view.Choreographer;
 import android.view.Surface;
 import android.view.View;
 import androidx.annotation.NonNull;
@@ -25,6 +26,7 @@ import io.flutter.Log;
 import io.flutter.embedding.engine.renderer.FlutterRenderer;
 import io.flutter.embedding.engine.renderer.RenderSurface;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -65,6 +67,9 @@ public class FlutterImageView extends View implements RenderSurface {
   @Nullable private Image pendingImage;
   /** An Image that needs to be closed once the associated Bitmap is no longer in use. */
   @Nullable private Image pendingCloseImage;
+
+  final int maxAcquiredImages = 3;
+  ArrayDeque<Image> acquiredImages = new ArrayDeque<>();
 
   public ImageReader getImageReader() {
     return imageReader;
@@ -141,10 +146,10 @@ public class FlutterImageView extends View implements RenderSurface {
           width,
           height,
           PixelFormat.RGBA_8888,
-          4,
+          6,
           HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
     } else {
-      return ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 4);
+      return ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 6);
     }
   }
 
@@ -224,6 +229,7 @@ public class FlutterImageView extends View implements RenderSurface {
     if (!isAttachedToFlutterRenderer) {
       return false;
     }
+    closeImagesIfNeeded();
     // 1. `acquireLatestImage()` may return null if no new image is available.
     // 2. There's no guarantee that `onDraw()` is called after `invalidate()`.
     // For example, the device may not produce new frames if it's in sleep mode
@@ -232,10 +238,17 @@ public class FlutterImageView extends View implements RenderSurface {
     // 3. While the engine will also stop producing frames, there is a race condition.
     final Image newImage = imageReader.acquireLatestImage();
     if (newImage != null) {
-      if (pendingImage != null) {
-        pendingImage.close();
+      // Put the image in a queue
+      acquiredImages.offer(newImage);
+      if (acquiredImages.size() > maxAcquiredImages) {
+        Image image = acquiredImages.pollFirst();
+        if (image != null) {
+          image.close();
+        }
       }
-      pendingImage = newImage;
+      if (pendingImage == null) {
+        pendingImage = acquiredImages.pollFirst();
+      }
       invalidate();
     }
     return newImage != null || pendingImage != null;
@@ -287,6 +300,21 @@ public class FlutterImageView extends View implements RenderSurface {
       }
       pendingCloseImage = pendingImage;
       pendingImage = null;
+      if (!acquiredImages.isEmpty()) {
+        // Process the next image
+        Choreographer.FrameCallback frameCallback =
+            new Choreographer.FrameCallback() {
+              @Override
+              public void doFrame(long time) {
+                if (pendingImage == null && !acquiredImages.isEmpty()) {
+                  pendingImage = acquiredImages.pollFirst();
+                  onImageAvailableListener.onImageAvailable(imageReader);
+                }
+              }
+            };
+        Choreographer.getInstance().postFrameCallback(frameCallback);
+        invalidate();
+      }
     }
     if (currentBitmap != null) {
       canvas.drawBitmap(currentBitmap, 0, 0, null);
@@ -294,6 +322,12 @@ public class FlutterImageView extends View implements RenderSurface {
   }
 
   private void closeAllImages() {
+    while (!acquiredImages.isEmpty()) {
+      Image image = acquiredImages.poll();
+      if (image != null) {
+        image.close();
+      }
+    }
     if (pendingImage != null) {
       pendingImage.close();
       pendingImage = null;
@@ -302,6 +336,23 @@ public class FlutterImageView extends View implements RenderSurface {
       pendingCloseImage.close();
       pendingCloseImage = null;
     }
+  }
+
+  private void closeImagesIfNeeded() {
+    if (imageReader != null) {
+      while (!acquiredImages.isEmpty() && (countOpenedImages() > imageReader.getMaxImages() - 2)) {
+        Image image = acquiredImages.pollFirst();
+        if (image != null) {
+          image.close();
+        }
+      }
+    }
+  }
+
+  private int countOpenedImages() {
+    return acquiredImages.size()
+        + (pendingImage != null ? 1 : 0)
+        + (pendingCloseImage != null ? 1 : 0);
   }
 
   @TargetApi(29)
