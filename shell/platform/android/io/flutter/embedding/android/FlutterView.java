@@ -1402,25 +1402,36 @@ public class FlutterView extends FrameLayout
           }
         };
     pendingRevertImageViewListener = listener;
-    Choreographer.getInstance()
-        .postFrameCallback(
-            new Choreographer.FrameCallback() {
-              @Override
-              public void doFrame(long frameTimeNanos) {
-                Choreographer.getInstance()
-                    .postFrameCallback(
-                        new Choreographer.FrameCallback() {
-                          @Override
-                          public void doFrame(long frameTimeNanos) {
-                            if (pendingRevertImageViewListener == listener) {
-                              pendingRevertImageViewListener.onFlutterUiDisplayed();
-                              pendingRevertImageViewListener = null;
-                            }
-                          }
-                        });
-              }
-            });
+    postFrameCallbackAfterNFrames(
+        new Choreographer.FrameCallback() {
+          @Override
+          public void doFrame(long frameTimeNanos) {
+            if (pendingRevertImageViewListener == listener) {
+              pendingRevertImageViewListener.onFlutterUiDisplayed();
+              pendingRevertImageViewListener = null;
+            }
+          }
+        },
+        2);
     // renderer.addIsDisplayingFlutterUiListener(pendingRevertImageViewListener);
+  }
+
+  private void postFrameCallbackAfterNFrames(
+      final Choreographer.FrameCallback callback, final int nFrames) {
+    Choreographer.FrameCallback frameCountingCallback =
+        new Choreographer.FrameCallback() {
+          private int frameCounter = 0;
+
+          @Override
+          public void doFrame(long frameTimeNanos) {
+            if (++frameCounter > nFrames) {
+              callback.doFrame(frameTimeNanos);
+            } else {
+              Choreographer.getInstance().postFrameCallback(this);
+            }
+          }
+        };
+    Choreographer.getInstance().postFrameCallback(frameCountingCallback);
   }
 
   public void attachOverlaySurfaceToRender(@NonNull FlutterImageView view) {
