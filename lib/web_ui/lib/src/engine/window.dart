@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-@JS()
-library window;
-
 import 'dart:async';
-import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
@@ -16,15 +12,16 @@ import 'package:ui/ui_web/src/ui_web.dart' as ui_web;
 import '../engine.dart' show DimensionsProvider, registerHotRestartListener, renderer;
 import 'display.dart';
 import 'dom.dart';
-import 'embedder.dart';
 import 'mouse/context_menu.dart';
 import 'mouse/cursor.dart';
 import 'navigation/history.dart';
 import 'platform_dispatcher.dart';
 import 'platform_views/message_handler.dart';
+import 'semantics/accessibility.dart';
 import 'services.dart';
 import 'util.dart';
 import 'view_embedder/dom_manager.dart';
+import 'view_embedder/embedding_strategy/embedding_strategy.dart';
 
 typedef _HandleMessageCallBack = Future<bool> Function();
 
@@ -39,21 +36,39 @@ const int kImplicitViewId = 0;
 /// In addition to everything defined in [ui.FlutterView], this class adds
 /// a few web-specific properties.
 base class EngineFlutterView implements ui.FlutterView {
+  /// Creates a [ui.FlutterView] that can be used in multi-view mode.
+  ///
+  /// The [hostElement] parameter specifies the container in the DOM into which
+  /// the Flutter view will be rendered.
   factory EngineFlutterView(
     int viewId,
     EnginePlatformDispatcher platformDispatcher,
+    DomElement hostElement,
   ) = _EngineFlutterViewImpl;
 
   EngineFlutterView._(
     this.viewId,
     this.platformDispatcher,
-  );
+    // This is nullable to accommodate the legacy `EngineFlutterWindow`. In
+    // multi-view mode, the host element is required for each view (as reflected
+    // by the public `EngineFlutterView` constructor).
+    DomElement? hostElement,
+  )   : embeddingStrategy = EmbeddingStrategy.create(hostElement: hostElement),
+        _dimensionsProvider = DimensionsProvider.create(hostElement: hostElement) {
+    platformDispatcher.registerView(this);
+    // The embeddingStrategy will take care of cleaning up the rootElement on
+    // hot restart.
+    embeddingStrategy.attachGlassPane(dom.rootElement);
+  }
 
   @override
   final int viewId;
 
   @override
   final EnginePlatformDispatcher platformDispatcher;
+
+  /// Abstracts all the DOM manipulations required to embed a Flutter view in a user-supplied `hostElement`.
+  final EmbeddingStrategy embeddingStrategy;
 
   final ViewConfiguration _viewConfiguration = const ViewConfiguration();
 
@@ -63,12 +78,16 @@ base class EngineFlutterView implements ui.FlutterView {
   @override
   void updateSemantics(ui.SemanticsUpdate update) => platformDispatcher.updateSemantics(update);
 
+  // TODO(yjbanov): How should this look like for multi-view?
+  //                https://github.com/flutter/flutter/issues/137445
+  late final AccessibilityAnnouncements accessibilityAnnouncements =
+      AccessibilityAnnouncements(hostElement: dom.announcementsHost);
+
   late final MouseCursor mouseCursor = MouseCursor(dom.rootElement);
 
   late final ContextMenu contextMenu = ContextMenu(dom.rootElement);
 
-  late final DomManager dom =
-      DomManager.fromFlutterViewEmbedderDEPRECATED(flutterViewEmbedder);
+  late final DomManager dom = DomManager(devicePixelRatio: devicePixelRatio);
 
   late final PlatformViewMessageHandler platformViewMessageHandler =
       PlatformViewMessageHandler(platformViewsContainer: dom.platformViewsHost);
@@ -137,20 +156,17 @@ base class EngineFlutterView implements ui.FlutterView {
   @override
   double get devicePixelRatio => display.devicePixelRatio;
 
-  late DimensionsProvider _dimensionsProvider;
-  void configureDimensionsProvider(DimensionsProvider dimensionsProvider) {
-    _dimensionsProvider = dimensionsProvider;
-  }
+  final DimensionsProvider _dimensionsProvider;
 
   Stream<ui.Size?> get onResize => _dimensionsProvider.onResize;
 }
 
 final class _EngineFlutterViewImpl extends EngineFlutterView {
   _EngineFlutterViewImpl(
-    int viewId,
-    EnginePlatformDispatcher platformDispatcher,
-  ) : super._(viewId, platformDispatcher) {
-    platformDispatcher.registerView(this);
+    super.viewId,
+    super.platformDispatcher,
+    super.hostElement,
+  ) : super._() {
     registerHotRestartListener(() {
       // TODO(harryterkelsen): What should we do about this in multi-view?
       renderer.clearFragmentProgramCache();
@@ -162,10 +178,10 @@ final class _EngineFlutterViewImpl extends EngineFlutterView {
 /// The Web implementation of [ui.SingletonFlutterWindow].
 final class EngineFlutterWindow extends EngineFlutterView implements ui.SingletonFlutterWindow {
   EngineFlutterWindow(
-    int viewId,
-    EnginePlatformDispatcher platformDispatcher,
-  ) : super._(viewId, platformDispatcher) {
-    platformDispatcher.registerView(this);
+    super.viewId,
+    super.platformDispatcher,
+    super.hostElement,
+  ) : super._() {
     if (ui_web.isCustomUrlStrategySet) {
       _browserHistory = createHistoryForExistingState(ui_web.urlStrategy);
     }
@@ -567,8 +583,27 @@ final class EngineFlutterWindow extends EngineFlutterView implements ui.Singleto
 /// `dart:ui` window delegates to this value. However, this value has a wider
 /// API surface, providing Web-specific functionality that the standard
 /// `dart:ui` version does not.
-final EngineFlutterWindow window =
-    EngineFlutterWindow(kImplicitViewId, EnginePlatformDispatcher.instance);
+EngineFlutterWindow get window {
+  assert(
+    _window != null,
+    'Trying to access the implicit FlutterView, but it is not available.\n'
+    'Note: the implicit FlutterView is not available in multi-view mode.',
+  );
+  return _window!;
+}
+EngineFlutterWindow? _window;
+
+/// Initializes the [window] (aka the implicit view), if it's not already
+/// initialized.
+EngineFlutterWindow ensureImplicitViewInitialized({
+  DomElement? hostElement,
+}) {
+  return _window ??= EngineFlutterWindow(
+    kImplicitViewId,
+    EnginePlatformDispatcher.instance,
+    hostElement,
+  );
+}
 
 /// The Web implementation of [ui.ViewPadding].
 class ViewPadding implements ui.ViewPadding {

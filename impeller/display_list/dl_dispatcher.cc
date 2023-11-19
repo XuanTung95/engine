@@ -693,14 +693,14 @@ void DlDispatcher::transformFullPerspective(SkScalar mxx,
   // The order of arguments is row-major but Impeller matrices are
   // column-major.
   // clang-format off
-  auto xformation = Matrix{
+  auto transform = Matrix{
     mxx, myx, mzx, mwx,
     mxy, myy, mzy, mwy,
     mxz, myz, mzz, mwz,
     mxt, myt, mzt, mwt
   };
   // clang-format on
-  canvas_.Transform(xformation);
+  canvas_.Transform(transform);
 }
 
 // |flutter::DlOpReceiver|
@@ -759,14 +759,8 @@ void DlDispatcher::drawPaint() {
 
 // |flutter::DlOpReceiver|
 void DlDispatcher::drawLine(const SkPoint& p0, const SkPoint& p1) {
-  auto path =
-      PathBuilder{}
-          .AddLine(skia_conversions::ToPoint(p0), skia_conversions::ToPoint(p1))
-          .SetConvexity(Convexity::kConvex)
-          .TakePath();
-  Paint paint = paint_;
-  paint.style = Paint::Style::kStroke;
-  canvas_.DrawPath(path, paint);
+  canvas_.DrawLine(skia_conversions::ToPoint(p0), skia_conversions::ToPoint(p1),
+                   paint_);
 }
 
 // |flutter::DlOpReceiver|
@@ -879,8 +873,7 @@ void DlDispatcher::drawPoints(PointMode mode,
       for (uint32_t i = 1; i < count; i += 2) {
         Point p0 = skia_conversions::ToPoint(points[i - 1]);
         Point p1 = skia_conversions::ToPoint(points[i]);
-        auto path = PathBuilder{}.AddLine(p0, p1).TakePath();
-        canvas_.DrawPath(path, paint);
+        canvas_.DrawLine(p0, p1, paint);
       }
       break;
     case flutter::DlCanvas::PointMode::kPolygon:
@@ -888,8 +881,7 @@ void DlDispatcher::drawPoints(PointMode mode,
         Point p0 = skia_conversions::ToPoint(points[0]);
         for (uint32_t i = 1; i < count; i++) {
           Point p1 = skia_conversions::ToPoint(points[i]);
-          auto path = PathBuilder{}.AddLine(p0, p1).TakePath();
-          canvas_.DrawPath(path, paint);
+          canvas_.DrawLine(p0, p1, paint);
           p0 = p1;
         }
       }
@@ -997,7 +989,7 @@ void DlDispatcher::drawDisplayList(
   // Matrix and clip are left untouched, the current
   // transform is saved as the new base matrix, and paint
   // values are reset to defaults.
-  initial_matrix_ = canvas_.GetCurrentTransformation();
+  initial_matrix_ = canvas_.GetCurrentTransform();
   paint_ = Paint();
 
   // Handle passed opacity in the most brute-force way by using
@@ -1104,7 +1096,7 @@ void DlDispatcher::drawShadow(const SkPath& path,
   paint.mask_blur_descriptor = Paint::MaskBlurDescriptor{
       .style = FilterContents::BlurStyle::kNormal,
       .sigma = Radius{kLightRadius * occluder_z /
-                      canvas_.GetCurrentTransformation().GetScale().y},
+                      canvas_.GetCurrentTransform().GetScale().y},
   };
 
   canvas_.Save();

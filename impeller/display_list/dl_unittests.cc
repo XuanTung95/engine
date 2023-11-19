@@ -956,7 +956,7 @@ TEST_P(DisplayListTest, TransparentShadowProducesCorrectColor) {
 
   std::shared_ptr<SolidRRectBlurContents> rrect_blur;
   picture.pass->IterateAllEntities([&rrect_blur](Entity& entity) {
-    if (ScalarNearlyEqual(entity.GetTransformation().GetScale().x, 1.618f)) {
+    if (ScalarNearlyEqual(entity.GetTransform().GetScale().x, 1.618f)) {
       rrect_blur = std::static_pointer_cast<SolidRRectBlurContents>(
           entity.GetContents());
       return false;
@@ -1357,7 +1357,7 @@ TEST_P(DisplayListTest, MaskBlursApplyCorrectlyToColorSources) {
           stops.data(), flutter::DlTileMode::kClamp)};
 
   int offset = 100;
-  for (auto color_source : color_sources) {
+  for (const auto& color_source : color_sources) {
     flutter::DlPaint paint;
     paint.setColorSource(color_source);
     paint.setMaskFilter(blur_filter);

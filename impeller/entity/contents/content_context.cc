@@ -340,6 +340,9 @@ ContentContext::ContentContext(
   if (GetContext()->GetBackendType() == Context::BackendType::kOpenGLES) {
     texture_external_pipelines_.CreateDefault(*context_, options);
   }
+  if (GetContext()->GetBackendType() == Context::BackendType::kOpenGLES) {
+    tiled_texture_external_pipelines_.CreateDefault(*context_, options);
+  }
 #endif  // IMPELLER_ENABLE_OPENGLES
   if (context_->GetCapabilities()->SupportsCompute()) {
     auto pipeline_desc =
@@ -430,7 +433,7 @@ std::shared_ptr<Texture> ContentContext::MakeSubpass(
     return nullptr;
   }
 
-  if (!sub_command_buffer->SubmitCommandsAsync(std::move(sub_renderpass))) {
+  if (!sub_command_buffer->EncodeAndSubmit(sub_renderpass)) {
     return nullptr;
   }
 
