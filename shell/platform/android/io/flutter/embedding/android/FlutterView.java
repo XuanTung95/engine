@@ -19,6 +19,7 @@ import android.provider.Settings;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
 import android.util.SparseArray;
+import android.view.Choreographer;
 import android.view.DisplayCutout;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -135,6 +136,7 @@ public class FlutterView extends FrameLayout
   @Nullable private AndroidTouchProcessor androidTouchProcessor;
   @Nullable private AccessibilityBridge accessibilityBridge;
   @Nullable private TextServicesManager textServicesManager;
+  @Nullable private FlutterUiDisplayListener pendingRevertImageViewListener;
 
   // Provides access to foldable/hinge information
   @Nullable private WindowInfoRepositoryCallbackAdapterWrapper windowInfoRepo;
@@ -1326,6 +1328,13 @@ public class FlutterView extends FrameLayout
    * Otherwise, it resizes the {@link FlutterImageView} based on the current view size.
    */
   public void convertToImageView() {
+    if (renderSurface == flutterImageView) {
+      return;
+    }
+    if (pendingRevertImageViewListener != null) {
+      pendingRevertImageViewListener.onFlutterUiDisplayed();
+      pendingRevertImageViewListener = null;
+    }
     renderSurface.pause();
 
     if (flutterImageView == null) {
@@ -1375,7 +1384,7 @@ public class FlutterView extends FrameLayout
 
     // Install a Flutter UI listener to wait until the first frame is rendered
     // in the new surface to call the `onDone` callback.
-    renderer.addIsDisplayingFlutterUiListener(
+    final FlutterUiDisplayListener listener =
         new FlutterUiDisplayListener() {
           @Override
           public void onFlutterUiDisplayed() {
@@ -1391,7 +1400,38 @@ public class FlutterView extends FrameLayout
           public void onFlutterUiNoLongerDisplayed() {
             // no-op
           }
-        });
+        };
+    pendingRevertImageViewListener = listener;
+    postFrameCallbackAfterNFrames(
+        new Choreographer.FrameCallback() {
+          @Override
+          public void doFrame(long frameTimeNanos) {
+            if (pendingRevertImageViewListener == listener) {
+              pendingRevertImageViewListener.onFlutterUiDisplayed();
+              pendingRevertImageViewListener = null;
+            }
+          }
+        },
+        2);
+    // renderer.addIsDisplayingFlutterUiListener(pendingRevertImageViewListener);
+  }
+
+  private void postFrameCallbackAfterNFrames(
+      final Choreographer.FrameCallback callback, final int nFrames) {
+    Choreographer.FrameCallback frameCountingCallback =
+        new Choreographer.FrameCallback() {
+          private int frameCounter = 0;
+
+          @Override
+          public void doFrame(long frameTimeNanos) {
+            if (++frameCounter > nFrames) {
+              callback.doFrame(frameTimeNanos);
+            } else {
+              Choreographer.getInstance().postFrameCallback(this);
+            }
+          }
+        };
+    Choreographer.getInstance().postFrameCallback(frameCountingCallback);
   }
 
   public void attachOverlaySurfaceToRender(@NonNull FlutterImageView view) {

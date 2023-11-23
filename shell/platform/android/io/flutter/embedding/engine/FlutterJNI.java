@@ -396,6 +396,9 @@ public class FlutterJNI {
   private final Set<FlutterUiDisplayListener> flutterUiDisplayListeners =
       new CopyOnWriteArraySet<>();
 
+  @NonNull
+  private final Set<OnFrameTimeListener> onFrameTimeListeners = new CopyOnWriteArraySet<>();
+
   @NonNull private final Looper mainLooper; // cached to avoid synchronization on repeat access.
 
   // ------ Start Native Attach/Detach Support ----
@@ -1528,4 +1531,60 @@ public class FlutterJNI {
   public interface AsyncWaitForVsyncDelegate {
     void asyncWaitForVsync(final long cookie);
   }
+
+  // ----- Start Frame Time Listener Support -----
+
+  /**
+   * Interface providing a callback for Flutter's engine to notifies Android of a frame time event.
+   *
+   * <p>This callback may be invoked from any thread. Implementers of {@link OnFrameTimeListener}
+   * should ensure to check and handle the current thread appropriately, especially if subsequent
+   * actions are expected to run on the main thread.
+   */
+  public interface OnFrameTimeListener {
+
+    /**
+     * Callback triggered when the rasterizer is beginning its rendering process.
+     *
+     * @param buildStartTime Timestamp (in nanoseconds) when build process started.
+     * @param buildEndTime Timestamp (in nanoseconds) when build process completed.
+     * @param rasterStartTime Timestamp (in nanoseconds) when the rasterizer begin its rendering.
+     */
+    void onRasterStart(long buildStartTime, long buildEndTime, long rasterStartTime);
+  }
+
+  /**
+   * Flutter's engine notifies {@code FlutterJNI} when rasterizer begins its rendering process.
+   *
+   * @param buildStartTime Timestamp (in nanoseconds) when build process started.
+   * @param buildEndTime Timestamp (in nanoseconds) when build process completed.
+   * @param rasterStartTime Timestamp (in nanoseconds) when the rasterizer begin its rendering.
+   */
+  public void onRasterStart(long buildStartTime, long buildEndTime, long rasterStartTime) {
+    for (OnFrameTimeListener listener : onFrameTimeListeners) {
+      listener.onRasterStart(buildStartTime, buildEndTime, rasterStartTime);
+    }
+  }
+
+  /**
+   * Adds a {@link OnFrameTimeListener}, which receives a callback when Flutter's engine notifies
+   * {@code FlutterJNI} about frame time event.
+   *
+   * <p>This callback may be invoked from any thread. Implementers of {@link OnFrameTimeListener}
+   * should ensure to check and handle the current thread appropriately, especially if subsequent
+   * actions are expected to run on the main thread.
+   */
+  public void addOnFrameTimeListener(@NonNull OnFrameTimeListener listener) {
+    onFrameTimeListeners.add(listener);
+  }
+
+  /**
+   * Removes a {@link OnFrameTimeListener} that was added with {@link
+   * #addOnFrameTimeListener(OnFrameTimeListener)}.
+   */
+  public void removeOnFrameTimeListener(@NonNull OnFrameTimeListener listener) {
+    onFrameTimeListeners.remove(listener);
+  }
+
+  // ----- End Frame Time Listener Support -----
 }

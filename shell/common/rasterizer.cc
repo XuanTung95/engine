@@ -604,6 +604,10 @@ std::unique_ptr<FrameItem> Rasterizer::DrawToSurfacesUnsafe(
 
   frame_timings_recorder.RecordRasterStart(fml::TimePoint::Now());
 
+  if (external_view_embedder_) {
+    external_view_embedder_->OnRasterStart(frame_timings_recorder);
+  }
+
   // Second traverse: draw all layer trees.
   std::vector<std::unique_ptr<LayerTreeTask>> resubmitted_tasks;
   for (std::unique_ptr<LayerTreeTask>& task : tasks) {

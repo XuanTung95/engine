@@ -1064,5 +1064,17 @@ TEST(AndroidExternalViewEmbedder, TeardownDoesNotCallJNIMethod) {
   embedder->Teardown();
 }
 
+TEST(AndroidExternalViewEmbedder, CallOnRasterStart) {
+  auto jni_mock = std::make_shared<JNIMock>();
+  auto android_context =
+      std::make_shared<AndroidContext>(AndroidRenderingAPI::kSoftware);
+  auto embedder = std::make_unique<AndroidExternalViewEmbedder>(
+      *android_context, jni_mock, nullptr, GetTaskRunnersForFixture());
+  FrameTimingsRecorder recorder;
+
+  EXPECT_CALL(*jni_mock, OnRasterStart(::testing::_)).Times(1);
+  embedder->OnRasterStart(recorder);
+}
+
 }  // namespace testing
 }  // namespace flutter
