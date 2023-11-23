@@ -16,6 +16,7 @@ import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
 import android.util.AttributeSet;
+import android.view.Choreographer;
 import android.view.Surface;
 import android.view.View;
 import androidx.annotation.NonNull;
@@ -25,7 +26,10 @@ import io.flutter.Log;
 import io.flutter.embedding.engine.renderer.FlutterRenderer;
 import io.flutter.embedding.engine.renderer.RenderSurface;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Paints a Flutter UI provided by an {@link android.media.ImageReader} onto a {@link
@@ -44,9 +48,28 @@ public class FlutterImageView extends View implements RenderSurface {
   private static final String TAG = "FlutterImageView";
 
   @NonNull private ImageReader imageReader;
-  @Nullable private Image currentImage;
   @Nullable private Bitmap currentBitmap;
   @Nullable private FlutterRenderer flutterRenderer;
+  @NonNull private final Set<Runnable> onImageAvailableListeners = new HashSet<>();
+
+  @NonNull
+  private final ImageReader.OnImageAvailableListener onImageAvailableListener =
+      new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+          for (Runnable listener : onImageAvailableListeners) {
+            listener.run();
+          }
+        }
+      };
+
+  /** Image pending to be draw. */
+  @Nullable private Image pendingImage;
+  /** An Image that needs to be closed once the associated Bitmap is no longer in use. */
+  @Nullable private Image pendingCloseImage;
+
+  final int maxAcquiredImages = 3;
+  ArrayDeque<Image> acquiredImages = new ArrayDeque<>();
 
   public ImageReader getImageReader() {
     return imageReader;
@@ -87,6 +110,7 @@ public class FlutterImageView extends View implements RenderSurface {
       @NonNull Context context, @NonNull ImageReader imageReader, SurfaceKind kind) {
     super(context, null);
     this.imageReader = imageReader;
+    setOnImageAvailableListener();
     this.kind = kind;
     init();
   }
@@ -97,6 +121,12 @@ public class FlutterImageView extends View implements RenderSurface {
 
   private static void logW(String format, Object... args) {
     Log.w(TAG, String.format(Locale.US, format, args));
+  }
+
+  private void setOnImageAvailableListener() {
+    if (imageReader != null) {
+      imageReader.setOnImageAvailableListener(onImageAvailableListener, null);
+    }
   }
 
   @TargetApi(19)
@@ -116,10 +146,10 @@ public class FlutterImageView extends View implements RenderSurface {
           width,
           height,
           PixelFormat.RGBA_8888,
-          3,
+          6,
           HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
     } else {
-      return ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3);
+      return ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 6);
     }
   }
 
@@ -171,7 +201,7 @@ public class FlutterImageView extends View implements RenderSurface {
     currentBitmap = null;
 
     // Close and clear the current image if any.
-    closeCurrentImage();
+    closeAllImages();
     invalidate();
     isAttachedToFlutterRenderer = false;
     if (kind == SurfaceKind.background) {
@@ -195,6 +225,7 @@ public class FlutterImageView extends View implements RenderSurface {
     if (!isAttachedToFlutterRenderer) {
       return false;
     }
+    closeImagesIfNeeded();
     // 1. `acquireLatestImage()` may return null if no new image is available.
     // 2. There's no guarantee that `onDraw()` is called after `invalidate()`.
     // For example, the device may not produce new frames if it's in sleep mode
@@ -203,12 +234,28 @@ public class FlutterImageView extends View implements RenderSurface {
     // 3. While the engine will also stop producing frames, there is a race condition.
     final Image newImage = imageReader.acquireLatestImage();
     if (newImage != null) {
-      // Only close current image after acquiring valid new image
-      closeCurrentImage();
-      currentImage = newImage;
+      // Put the image in a queue
+      acquiredImages.offer(newImage);
+      if (acquiredImages.size() > maxAcquiredImages) {
+        Image image = acquiredImages.pollFirst();
+        if (image != null) {
+          image.close();
+        }
+      }
+      if (pendingImage == null) {
+        pendingImage = acquiredImages.pollFirst();
+      }
       invalidate();
     }
-    return newImage != null;
+    return newImage != null || pendingImage != null;
+  }
+
+  public @Nullable Image getPendingImage() {
+    return pendingImage;
+  }
+
+  public boolean getIsAttachedToRenderer() {
+    return isAttachedToFlutterRenderer;
   }
 
   /** Creates a new image reader with the provided size. */
@@ -221,11 +268,12 @@ public class FlutterImageView extends View implements RenderSurface {
     }
 
     // Close resources.
-    closeCurrentImage();
+    closeAllImages();
     // Close the current image reader, then create a new one with the new size.
     // Image readers cannot be resized once created.
     closeImageReader();
     imageReader = createImageReader(width, height);
+    setOnImageAvailableListener();
   }
 
   /**
@@ -241,24 +289,70 @@ public class FlutterImageView extends View implements RenderSurface {
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
-    if (currentImage != null) {
-      updateCurrentBitmap();
+    if (pendingImage != null) {
+      updateCurrentBitmap(pendingImage);
+      if (pendingCloseImage != null) {
+        pendingCloseImage.close();
+      }
+      pendingCloseImage = pendingImage;
+      pendingImage = null;
+      if (!acquiredImages.isEmpty()) {
+        // Process the next image
+        Choreographer.FrameCallback frameCallback =
+            new Choreographer.FrameCallback() {
+              @Override
+              public void doFrame(long time) {
+                if (pendingImage == null && !acquiredImages.isEmpty()) {
+                  pendingImage = acquiredImages.pollFirst();
+                  onImageAvailableListener.onImageAvailable(imageReader);
+                }
+              }
+            };
+        Choreographer.getInstance().postFrameCallback(frameCallback);
+        invalidate();
+      }
     }
     if (currentBitmap != null) {
       canvas.drawBitmap(currentBitmap, 0, 0, null);
     }
   }
 
-  private void closeCurrentImage() {
-    // Close and clear the current image if any.
-    if (currentImage != null) {
-      currentImage.close();
-      currentImage = null;
+  private void closeAllImages() {
+    while (!acquiredImages.isEmpty()) {
+      Image image = acquiredImages.poll();
+      if (image != null) {
+        image.close();
+      }
+    }
+    if (pendingImage != null) {
+      pendingImage.close();
+      pendingImage = null;
+    }
+    if (pendingCloseImage != null) {
+      pendingCloseImage.close();
+      pendingCloseImage = null;
     }
   }
 
+  private void closeImagesIfNeeded() {
+    if (imageReader != null) {
+      while (!acquiredImages.isEmpty() && (countOpenedImages() > imageReader.getMaxImages() - 2)) {
+        Image image = acquiredImages.pollFirst();
+        if (image != null) {
+          image.close();
+        }
+      }
+    }
+  }
+
+  private int countOpenedImages() {
+    return acquiredImages.size()
+        + (pendingImage != null ? 1 : 0)
+        + (pendingCloseImage != null ? 1 : 0);
+  }
+
   @TargetApi(29)
-  private void updateCurrentBitmap() {
+  private void updateCurrentBitmap(@NonNull Image currentImage) {
     if (android.os.Build.VERSION.SDK_INT >= 29) {
       final HardwareBuffer buffer = currentImage.getHardwareBuffer();
       currentBitmap = Bitmap.wrapHardwareBuffer(buffer, ColorSpace.get(ColorSpace.Named.SRGB));
@@ -300,5 +394,23 @@ public class FlutterImageView extends View implements RenderSurface {
       // with the new size in the native side.
       flutterRenderer.swapSurface(imageReader.getSurface());
     }
+  }
+
+  /**
+   * Registers a callback to be notified when a new image becomes available.
+   *
+   * @param listener The listener to be added for new image notifications. Must not be null.
+   */
+  public void addOnImageAvailableListener(@NonNull Runnable listener) {
+    onImageAvailableListeners.add(listener);
+  }
+
+  /**
+   * Removes a callback previously added by {@code addOnImageAvailableListener}.
+   *
+   * @param listener The listener to be removed.
+   */
+  public void removeOnImageAvailableListener(@NonNull Runnable listener) {
+    onImageAvailableListeners.remove(listener);
   }
 }

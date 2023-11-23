@@ -555,6 +555,10 @@ RasterStatus Rasterizer::DrawToSurfaceUnsafe(
 
   frame_timings_recorder.RecordRasterStart(fml::TimePoint::Now());
 
+  if (external_view_embedder_) {
+    external_view_embedder_->OnRasterStart(frame_timings_recorder);
+  }
+
   // On Android, the external view embedder deletes surfaces in `BeginFrame`.
   //
   // Deleting a surface also clears the GL context. Therefore, acquire the
