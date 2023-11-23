@@ -1993,10 +1993,9 @@ bool Shell::OnServiceProtocolRenderFrameWithRasterStats(
     // set before build-end.
     auto frame_timings_recorder = std::make_unique<FrameTimingsRecorder>();
     const auto now = fml::TimePoint::Now();
-    const auto wall_time = fml::TimePoint::CurrentWallTime();
     frame_timings_recorder->RecordVsync(now, now);
-    frame_timings_recorder->RecordBuildStart(now, wall_time);
-    frame_timings_recorder->RecordBuildEnd(now, wall_time);
+    frame_timings_recorder->RecordBuildStart(now);
+    frame_timings_recorder->RecordBuildEnd(now);
 
     last_layer_tree->enable_leaf_layer_tracing(true);
     rasterizer_->DrawLastLayerTrees(std::move(frame_timings_recorder));

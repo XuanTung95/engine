@@ -132,19 +132,17 @@ TEST(RasterizerTest, create) {
 }
 
 static std::unique_ptr<FrameTimingsRecorder> CreateFinishedBuildRecorder(
-    fml::TimePoint timestamp,
-    fml::TimePoint wall_time) {
+    fml::TimePoint timestamp) {
   std::unique_ptr<FrameTimingsRecorder> recorder =
       std::make_unique<FrameTimingsRecorder>();
   recorder->RecordVsync(timestamp, timestamp);
-  recorder->RecordBuildStart(timestamp, wall_time);
-  recorder->RecordBuildEnd(timestamp, wall_time);
+  recorder->RecordBuildStart(timestamp);
+  recorder->RecordBuildEnd(timestamp);
   return recorder;
 }
 
 static std::unique_ptr<FrameTimingsRecorder> CreateFinishedBuildRecorder() {
-  return CreateFinishedBuildRecorder(fml::TimePoint::Now(),
-                                     fml::TimePoint::CurrentWallTime());
+  return CreateFinishedBuildRecorder(fml::TimePoint::Now());
 }
 
 TEST(RasterizerTest, drawEmptyPipeline) {
@@ -973,9 +971,6 @@ TEST(RasterizerTest,
   auto first_timestamp = fml::TimePoint::Now();
   auto second_timestamp = first_timestamp + fml::TimeDelta::FromMilliseconds(8);
   std::vector<fml::TimePoint> timestamps = {first_timestamp, second_timestamp};
-  auto first_wall_time = fml::TimePoint::CurrentWallTime();
-  auto second_wall_time = first_wall_time + fml::TimeDelta::FromMilliseconds(8);
-  std::vector<fml::TimePoint> wall_times = {first_wall_time, second_wall_time};
   int frame_rasterized_count = 0;
   EXPECT_CALL(delegate, OnFrameRasterized(_))
       .Times(2)
@@ -999,7 +994,7 @@ TEST(RasterizerTest,
       auto layer_tree_item = std::make_unique<FrameItem>(
           SingleLayerTreeList(kImplicitViewId, std::move(layer_tree),
                               kDevicePixelRatio),
-          CreateFinishedBuildRecorder(timestamps[i], wall_times[i]));
+          CreateFinishedBuildRecorder(timestamps[i]));
       PipelineProduceResult result =
           pipeline->Produce().Complete(std::move(layer_tree_item));
       EXPECT_TRUE(result.success);
@@ -1134,9 +1129,6 @@ TEST(RasterizerTest, presentationTimeSetWhenVsyncTargetInFuture) {
   const auto first_timestamp = fml::TimePoint::Now() + millis_16;
   auto second_timestamp = first_timestamp + millis_16;
   std::vector<fml::TimePoint> timestamps = {first_timestamp, second_timestamp};
-  auto first_wall_time = fml::TimePoint::CurrentWallTime();
-  auto second_wall_time = first_wall_time + fml::TimeDelta::FromMilliseconds(8);
-  std::vector<fml::TimePoint> wall_times = {first_wall_time, second_wall_time};
 
   int frames_submitted = 0;
   fml::CountDownLatch submit_latch(2);
@@ -1174,7 +1166,7 @@ TEST(RasterizerTest, presentationTimeSetWhenVsyncTargetInFuture) {
       auto layer_tree_item = std::make_unique<FrameItem>(
           SingleLayerTreeList(kImplicitViewId, std::move(layer_tree),
                              kDevicePixelRatio),
-          CreateFinishedBuildRecorder(timestamps[i], wall_times[i]));
+          CreateFinishedBuildRecorder(timestamps[i]));
       PipelineProduceResult result =
           pipeline->Produce().Complete(std::move(layer_tree_item));
       EXPECT_TRUE(result.success);
@@ -1224,7 +1216,6 @@ TEST(RasterizerTest, presentationTimeNotSetWhenVsyncTargetInPast) {
 
   const auto millis_16 = fml::TimeDelta::FromMilliseconds(16);
   const auto first_timestamp = fml::TimePoint::Now() - millis_16;
-  const auto first_wall_time = fml::TimePoint::CurrentWallTime() - millis_16;
 
   fml::CountDownLatch submit_latch(1);
   auto surface = std::make_unique<MockSurface>();
@@ -1258,7 +1249,7 @@ TEST(RasterizerTest, presentationTimeNotSetWhenVsyncTargetInPast) {
     auto layer_tree_item = std::make_unique<FrameItem>(
         SingleLayerTreeList(kImplicitViewId, std::move(layer_tree),
                            kDevicePixelRatio),
-        CreateFinishedBuildRecorder(first_timestamp, first_wall_time));
+        CreateFinishedBuildRecorder(first_timestamp));
     PipelineProduceResult result =
         pipeline->Produce().Complete(std::move(layer_tree_item));
     EXPECT_TRUE(result.success);

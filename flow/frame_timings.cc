@@ -43,34 +43,16 @@ fml::TimePoint FrameTimingsRecorder::GetBuildStartTime() const {
   return build_start_;
 }
 
-fml::TimePoint FrameTimingsRecorder::GetBuildStartWallTime() const {
-  std::scoped_lock state_lock(state_mutex_);
-  FML_DCHECK(state_ >= State::kBuildStart);
-  return build_start_wall_time_;
-}
-
 fml::TimePoint FrameTimingsRecorder::GetBuildEndTime() const {
   std::scoped_lock state_lock(state_mutex_);
   FML_DCHECK(state_ >= State::kBuildEnd);
   return build_end_;
 }
 
-fml::TimePoint FrameTimingsRecorder::GetBuildEndWallTime() const {
-  std::scoped_lock state_lock(state_mutex_);
-  FML_DCHECK(state_ >= State::kBuildEnd);
-  return build_end_wall_time_;
-}
-
 fml::TimePoint FrameTimingsRecorder::GetRasterStartTime() const {
   std::scoped_lock state_lock(state_mutex_);
   FML_DCHECK(state_ >= State::kRasterStart);
   return raster_start_;
-}
-
-fml::TimePoint FrameTimingsRecorder::GetRasterStartWallTime() const {
-  std::scoped_lock state_lock(state_mutex_);
-  FML_DCHECK(state_ >= State::kRasterStart);
-  return raster_start_wall_time_;
 }
 
 fml::TimePoint FrameTimingsRecorder::GetRasterEndTime() const {
@@ -126,26 +108,20 @@ void FrameTimingsRecorder::RecordVsync(fml::TimePoint vsync_start,
   (void)status;
 }
 
-void FrameTimingsRecorder::RecordBuildStart(
-    fml::TimePoint build_start,
-    fml::TimePoint build_start_wall_time) {
-  fml::Status status = RecordBuildStartImpl(build_start, build_start_wall_time);
+void FrameTimingsRecorder::RecordBuildStart(fml::TimePoint build_start) {
+  fml::Status status = RecordBuildStartImpl(build_start);
   FML_DCHECK(status.ok());
   (void)status;
 }
 
-void FrameTimingsRecorder::RecordBuildEnd(fml::TimePoint build_end,
-                                          fml::TimePoint build_end_wall_time) {
-  fml::Status status = RecordBuildEndImpl(build_end, build_end_wall_time);
+void FrameTimingsRecorder::RecordBuildEnd(fml::TimePoint build_end) {
+  fml::Status status = RecordBuildEndImpl(build_end);
   FML_DCHECK(status.ok());
   (void)status;
 }
 
-void FrameTimingsRecorder::RecordRasterStart(
-    fml::TimePoint raster_start,
-    fml::TimePoint raster_start_wall_time) {
-  fml::Status status =
-      RecordRasterStartImpl(raster_start, raster_start_wall_time);
+void FrameTimingsRecorder::RecordRasterStart(fml::TimePoint raster_start) {
+  fml::Status status = RecordRasterStartImpl(raster_start);
   FML_DCHECK(status.ok());
   (void)status;
 }
@@ -164,8 +140,7 @@ fml::Status FrameTimingsRecorder::RecordVsyncImpl(fml::TimePoint vsync_start,
 }
 
 fml::Status FrameTimingsRecorder::RecordBuildStartImpl(
-    fml::TimePoint build_start,
-    fml::TimePoint build_start_wall_time) {
+    fml::TimePoint build_start) {
   std::scoped_lock state_lock(state_mutex_);
   if (state_ != State::kVsync) {
     return fml::Status(fml::StatusCode::kFailedPrecondition,
@@ -173,13 +148,10 @@ fml::Status FrameTimingsRecorder::RecordBuildStartImpl(
   }
   state_ = State::kBuildStart;
   build_start_ = build_start;
-  build_start_wall_time_ = build_start_wall_time;
   return fml::Status();
 }
 
-fml::Status FrameTimingsRecorder::RecordBuildEndImpl(
-    fml::TimePoint build_end,
-    fml::TimePoint build_end_wall_time) {
+fml::Status FrameTimingsRecorder::RecordBuildEndImpl(fml::TimePoint build_end) {
   std::scoped_lock state_lock(state_mutex_);
   if (state_ != State::kBuildStart) {
     return fml::Status(fml::StatusCode::kFailedPrecondition,
@@ -187,13 +159,11 @@ fml::Status FrameTimingsRecorder::RecordBuildEndImpl(
   }
   state_ = State::kBuildEnd;
   build_end_ = build_end;
-  build_end_wall_time_ = build_end_wall_time;
   return fml::Status();
 }
 
 fml::Status FrameTimingsRecorder::RecordRasterStartImpl(
-    fml::TimePoint raster_start,
-    fml::TimePoint raster_start_wall_time) {
+    fml::TimePoint raster_start) {
   std::scoped_lock state_lock(state_mutex_);
   if (state_ != State::kBuildEnd) {
     return fml::Status(fml::StatusCode::kFailedPrecondition,
@@ -201,7 +171,6 @@ fml::Status FrameTimingsRecorder::RecordRasterStartImpl(
   }
   state_ = State::kRasterStart;
   raster_start_ = raster_start;
-  raster_start_wall_time_ = raster_start_wall_time;
   return fml::Status();
 }
 
@@ -255,17 +224,14 @@ std::unique_ptr<FrameTimingsRecorder> FrameTimingsRecorder::CloneUntil(
 
   if (state >= State::kBuildStart) {
     recorder->build_start_ = build_start_;
-    recorder->build_start_wall_time_ = build_start_wall_time_;
   }
 
   if (state >= State::kBuildEnd) {
     recorder->build_end_ = build_end_;
-    recorder->build_end_wall_time_ = build_end_wall_time_;
   }
 
   if (state >= State::kRasterStart) {
     recorder->raster_start_ = raster_start_;
-    recorder->raster_start_wall_time_ = raster_start_wall_time_;
   }
 
   if (state >= State::kRasterEnd) {

@@ -69,8 +69,7 @@ void Animator::BeginFrame(
   frame_request_number_++;
 
   frame_timings_recorder_ = std::move(frame_timings_recorder);
-  frame_timings_recorder_->RecordBuildStart(fml::TimePoint::Now(),
-                                            fml::TimePoint::CurrentWallTime());
+  frame_timings_recorder_->RecordBuildStart(fml::TimePoint::Now());
 
   size_t flow_id_count = trace_flow_ids_.size();
   std::unique_ptr<uint64_t[]> flow_ids =
@@ -183,11 +182,18 @@ void Animator::Render(int64_t view_id,
                       float device_pixel_ratio) {
   FML_CHECK(frame_timings_recorder_ != nullptr);
 
-  has_rendered_ = true;
+  if (!frame_timings_recorder_) {
+    // Framework can directly call render with a built scene.
+    frame_timings_recorder_ = std::make_unique<FrameTimingsRecorder>();
+    const fml::TimePoint placeholder_time = fml::TimePoint::Now();
+    frame_timings_recorder_->RecordVsync(placeholder_time, placeholder_time);
+    frame_timings_recorder_->RecordBuildStart(placeholder_time);
+  }
 
   TRACE_EVENT_WITH_FRAME_NUMBER(frame_timings_recorder_, "flutter",
                                 "Animator::Render", /*flow_id_count=*/0,
                                 /*flow_ids=*/nullptr);
+  frame_timings_recorder_->RecordBuildEnd(fml::TimePoint::Now());
 
   layer_trees_tasks_.push_back(std::make_unique<LayerTreeTask>(
       view_id, std::move(layer_tree), device_pixel_ratio));
@@ -214,9 +220,8 @@ void Animator::DrawLastLayerTrees(
   // given that the frame doesn't get built in this case, we
   // will use Now() for both start and end times as an indication.
   const auto now = fml::TimePoint::Now();
-  const auto wall_time = fml::TimePoint::CurrentWallTime();
-  frame_timings_recorder->RecordBuildStart(now, wall_time);
-  frame_timings_recorder->RecordBuildEnd(now, wall_time);
+  frame_timings_recorder->RecordBuildStart(now);
+  frame_timings_recorder->RecordBuildEnd(now);
   delegate_.OnAnimatorDrawLastLayerTrees(std::move(frame_timings_recorder));
 }
 
