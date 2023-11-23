@@ -122,8 +122,7 @@ void Animator::EndFrame() {
   FML_CHECK(frame_timings_recorder_ != nullptr);
   if (!layer_trees_tasks_.empty()) {
     // The build is completed in OnAnimatorBeginFrame.
-    frame_timings_recorder_->RecordBuildEnd(fml::TimePoint::Now(),
-                                            fml::TimePoint::CurrentWallTime());
+    frame_timings_recorder_->RecordBuildEnd(fml::TimePoint::Now());
 
     delegate_.OnAnimatorUpdateLatestFrameTargetTime(
         frame_timings_recorder_->GetVsyncTargetTime());
@@ -182,13 +181,7 @@ void Animator::Render(int64_t view_id,
                       float device_pixel_ratio) {
   FML_CHECK(frame_timings_recorder_ != nullptr);
 
-  if (!frame_timings_recorder_) {
-    // Framework can directly call render with a built scene.
-    frame_timings_recorder_ = std::make_unique<FrameTimingsRecorder>();
-    const fml::TimePoint placeholder_time = fml::TimePoint::Now();
-    frame_timings_recorder_->RecordVsync(placeholder_time, placeholder_time);
-    frame_timings_recorder_->RecordBuildStart(placeholder_time);
-  }
+  has_rendered_ = true;
 
   TRACE_EVENT_WITH_FRAME_NUMBER(frame_timings_recorder_, "flutter",
                                 "Animator::Render", /*flow_id_count=*/0,
