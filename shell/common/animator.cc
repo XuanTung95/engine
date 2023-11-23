@@ -186,7 +186,6 @@ void Animator::Render(int64_t view_id,
   TRACE_EVENT_WITH_FRAME_NUMBER(frame_timings_recorder_, "flutter",
                                 "Animator::Render", /*flow_id_count=*/0,
                                 /*flow_ids=*/nullptr);
-  frame_timings_recorder_->RecordBuildEnd(fml::TimePoint::Now());
 
   layer_trees_tasks_.push_back(std::make_unique<LayerTreeTask>(
       view_id, std::move(layer_tree), device_pixel_ratio));
