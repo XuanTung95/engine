@@ -283,6 +283,7 @@ public class FlutterImageView extends View implements RenderSurface {
    * IllegalStateException}.
    */
   public void closeImageReader() {
+    closeAllImages();
     imageReader.close();
   }
 
