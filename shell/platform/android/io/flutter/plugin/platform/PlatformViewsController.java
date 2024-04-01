@@ -14,9 +14,6 @@ import android.content.MutableContextWrapper;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.media.ImageReader;
-import io.flutter.embedding.android.ImageReaderPlatformViewManager;
 import android.util.SparseArray;
 import android.view.MotionEvent;
 import android.view.MotionEvent.PointerCoords;
@@ -32,6 +29,7 @@ import androidx.annotation.VisibleForTesting;
 import io.flutter.Log;
 import io.flutter.embedding.android.AndroidTouchProcessor;
 import io.flutter.embedding.android.FlutterView;
+import io.flutter.embedding.android.ImageReaderPlatformViewManager;
 import io.flutter.embedding.android.MotionEventTracker;
 import io.flutter.embedding.engine.FlutterOverlaySurface;
 import io.flutter.embedding.engine.dart.DartExecutor;
@@ -162,7 +160,8 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
 
   private boolean enableFastHybridComposition = false;
 
-  private final ImageReaderPlatformViewManager imageReaderPlatformViewManager = new ImageReaderPlatformViewManager();
+  private final ImageReaderPlatformViewManager imageReaderPlatformViewManager =
+      new ImageReaderPlatformViewManager();
 
   private final PlatformViewsChannel.PlatformViewsHandler channelHandler =
       new PlatformViewsChannel.PlatformViewsHandler() {
@@ -361,9 +360,9 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
               return;
             }
             onComplete.run(
-              new PlatformViewsChannel.PlatformViewBufferSize(
-                  toLogicalPixels(viewWrapper.getRenderTargetWidth()),
-                  toLogicalPixels(viewWrapper.getRenderTargetHeight())));
+                new PlatformViewsChannel.PlatformViewBufferSize(
+                    toLogicalPixels(viewWrapper.getRenderTargetWidth()),
+                    toLogicalPixels(viewWrapper.getRenderTargetHeight())));
             return;
           }
 
@@ -628,11 +627,13 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
     parentView.setVisibility(View.VISIBLE);
 
     final FrameLayout.LayoutParams layoutParams =
-        new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
     embeddedView.setLayoutParams(layoutParams);
 
     parentView.addView(embeddedView);
-    // parentView.readyToDisplay(new FlutterMutatorsStack(), 0, 0, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+    // parentView.readyToDisplay(new FlutterMutatorsStack(), 0, 0,
+    // FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
 
     imageReaderPlatformViewManager.onPlatformViewCreated(viewId, parentView);
   }
@@ -889,10 +890,10 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
    */
   public void attachToView(@NonNull FlutterView newFlutterView) {
     flutterView = newFlutterView;
-    ApplicationInfo applicationInfo = flutterView.getContext()
-                        .getApplicationInfo();
+    ApplicationInfo applicationInfo = flutterView.getContext().getApplicationInfo();
     Bundle metaData = applicationInfo.metaData;
-    enableFastHybridComposition = metaData.getBoolean(ENABLE_FAST_HYBRID_COMPOSITION_DATA_KEY, false);
+    enableFastHybridComposition =
+        metaData.getBoolean(ENABLE_FAST_HYBRID_COMPOSITION_DATA_KEY, false);
     Log.e(TAG, "enableFastHybridComposition: " + enableFastHybridComposition);
     if (enableFastHybridComposition) {
       imageReaderPlatformViewManager.attachToView(flutterView);
@@ -1428,15 +1429,24 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
   }
 
   public FlutterOverlaySurface createImageReader(int id, int width, int height, int left, int top) {
-      return imageReaderPlatformViewManager.createImageReader(id, width, height, left, top);
+    return imageReaderPlatformViewManager.createImageReader(id, width, height, left, top);
   }
 
   public void addNewFrameInfo(long rasterStart, int[] viewIds) {
-      imageReaderPlatformViewManager.addNewFrameInfo(rasterStart, viewIds);
+    imageReaderPlatformViewManager.addNewFrameInfo(rasterStart, viewIds);
   }
 
-  public void updateFrameInfo(long rasterStart, int id, int width, int height, int left, int top, boolean haveOverlay, @NonNull FlutterMutatorsStack mutatorsStack) {
-      imageReaderPlatformViewManager.updateFrameInfo(id, rasterStart, width, height, top, left, haveOverlay, mutatorsStack);
+  public void updateFrameInfo(
+      long rasterStart,
+      int id,
+      int width,
+      int height,
+      int left,
+      int top,
+      boolean haveOverlay,
+      @NonNull FlutterMutatorsStack mutatorsStack) {
+    imageReaderPlatformViewManager.updateFrameInfo(
+        id, rasterStart, width, height, top, left, haveOverlay, mutatorsStack);
   }
 
   /**

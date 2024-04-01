@@ -7,8 +7,8 @@
 
 #include <unordered_map>
 
-#include "flutter/common/task_runners.h"
 #include "flutter/common/settings.h"
+#include "flutter/common/task_runners.h"
 #include "flutter/flow/embedded_views.h"
 #include "flutter/shell/platform/android/context/android_context.h"
 #include "flutter/shell/platform/android/external_view_embedder/surface_pool.h"
@@ -84,9 +84,7 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
   // on the screen.
   SkRect GetViewRect(int64_t view_id) const;
 
-  const Settings& GetSettings() const {
-    return settings_;
-  }
+  const Settings& GetSettings() const { return settings_; }
 
  private:
   // The number of frames the rasterizer task runner will continue
@@ -157,9 +155,9 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
                                                       const SkRect& rect);
 
   std::unique_ptr<SurfaceFrame> GetImageReaderFrame(GrDirectContext* context,
-                                                   int64_t view_id,
-                                                   int64_t width,
-                                                   int64_t height);
+                                                    int64_t view_id,
+                                                    int64_t width,
+                                                    int64_t height);
 
   void SubmitFlutterViewForFastHC(
       GrDirectContext* context,

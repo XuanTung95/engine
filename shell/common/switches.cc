@@ -456,10 +456,12 @@ Settings SettingsFromCommandLine(const fml::CommandLine& command_line) {
 
   {
     std::string enable_fast_hybrid_composition;
-    if (command_line.GetOptionValue(FlagForSwitch(Switch::EnableFastHybridComposition),
-                                    &enable_fast_hybrid_composition)) {
+    if (command_line.GetOptionValue(
+            FlagForSwitch(Switch::EnableFastHybridComposition),
+            &enable_fast_hybrid_composition)) {
       settings.enable_fast_hybrid_composition =
-          enable_fast_hybrid_composition.empty() || "true" == enable_fast_hybrid_composition;
+          enable_fast_hybrid_composition.empty() ||
+          "true" == enable_fast_hybrid_composition;
     }
   }
 

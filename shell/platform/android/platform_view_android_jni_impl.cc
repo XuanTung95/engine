@@ -962,9 +962,9 @@ bool RegisterApi(JNIEnv* env) {
     return false;
   }
 
-  g_create_image_reader_method =
-      env->GetMethodID(g_flutter_jni_class->obj(), "createImageReader",
-                       "(IIIII)Lio/flutter/embedding/engine/FlutterOverlaySurface;");
+  g_create_image_reader_method = env->GetMethodID(
+      g_flutter_jni_class->obj(), "createImageReader",
+      "(IIIII)Lio/flutter/embedding/engine/FlutterOverlaySurface;");
 
   if (g_create_image_reader_method == nullptr) {
     FML_LOG(ERROR) << "Could not locate createImageReader method";
@@ -972,8 +972,7 @@ bool RegisterApi(JNIEnv* env) {
   }
 
   g_add_new_frame_info_method =
-      env->GetMethodID(g_flutter_jni_class->obj(), "addNewFrameInfo",
-                       "(J[I)V");
+      env->GetMethodID(g_flutter_jni_class->obj(), "addNewFrameInfo", "(J[I)V");
 
   if (g_add_new_frame_info_method == nullptr) {
     FML_LOG(ERROR) << "Could not locate addNewFrameInfo method";
@@ -1837,7 +1836,11 @@ PlatformViewAndroidJNIImpl::FlutterViewCreateOverlaySurface() {
 }
 
 std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>
-PlatformViewAndroidJNIImpl::FlutterViewCreateImageReader(int id, int width, int height, int left, int top) {
+PlatformViewAndroidJNIImpl::FlutterViewCreateImageReader(int id,
+                                                         int width,
+                                                         int height,
+                                                         int left,
+                                                         int top) {
   JNIEnv* env = fml::jni::AttachCurrentThread();
 
   auto java_object = java_object_.get(env);
@@ -1846,8 +1849,9 @@ PlatformViewAndroidJNIImpl::FlutterViewCreateImageReader(int id, int width, int 
   }
 
   fml::jni::ScopedJavaLocalRef<jobject> overlay(
-      env, env->CallObjectMethod(java_object.obj(),
-                                 g_create_image_reader_method, id, width, height, left, top));
+      env,
+      env->CallObjectMethod(java_object.obj(), g_create_image_reader_method, id,
+                            width, height, left, top));
   FML_CHECK(fml::jni::CheckException(env));
 
   if (overlay.is_null()) {
@@ -1868,7 +1872,9 @@ PlatformViewAndroidJNIImpl::FlutterViewCreateImageReader(int id, int width, int 
       overlay_id, std::move(overlay_window));
 }
 
-void PlatformViewAndroidJNIImpl::FlutterViewAddNewFrameInfo(long raster_start, const std::vector<int>& view_ids) {
+void PlatformViewAndroidJNIImpl::FlutterViewAddNewFrameInfo(
+    long raster_start,
+    const std::vector<int>& view_ids) {
   JNIEnv* env = fml::jni::AttachCurrentThread();
 
   auto java_object = java_object_.get(env);
@@ -1878,12 +1884,21 @@ void PlatformViewAndroidJNIImpl::FlutterViewAddNewFrameInfo(long raster_start, c
   jintArray view_ids_array = env->NewIntArray(view_ids.size());
   env->SetIntArrayRegion(view_ids_array, 0, view_ids.size(), view_ids.data());
 
-  env->CallVoidMethod(java_object.obj(), g_add_new_frame_info_method, raster_start, view_ids_array);
+  env->CallVoidMethod(java_object.obj(), g_add_new_frame_info_method,
+                      raster_start, view_ids_array);
 
   FML_CHECK(fml::jni::CheckException(env));
 }
 
-void PlatformViewAndroidJNIImpl::FlutterViewUpdateFrameInfo(long raster_start, int id, int width, int height, int left, int top, bool have_overlay, MutatorsStack mutators_stack) {
+void PlatformViewAndroidJNIImpl::FlutterViewUpdateFrameInfo(
+    long raster_start,
+    int id,
+    int width,
+    int height,
+    int left,
+    int top,
+    bool have_overlay,
+    MutatorsStack mutators_stack) {
   JNIEnv* env = fml::jni::AttachCurrentThread();
 
   auto java_object = java_object_.get(env);
@@ -1950,7 +1965,9 @@ void PlatformViewAndroidJNIImpl::FlutterViewUpdateFrameInfo(long raster_start, i
     ++iter;
   }
 
-  env->CallVoidMethod(java_object.obj(), g_update_frame_info_method, raster_start, id, width, height, left, top, have_overlay, mutatorsStack);
+  env->CallVoidMethod(java_object.obj(), g_update_frame_info_method,
+                      raster_start, id, width, height, left, top, have_overlay,
+                      mutatorsStack);
 
   FML_CHECK(fml::jni::CheckException(env));
 }

@@ -195,7 +195,8 @@ void AndroidExternalViewEmbedder::SubmitFlutterViewForFastHC(
     frame->Submit();
     if (pending_revert_frame_count_ > 0) {
       pending_revert_frame_count_--;
-      int64_t raster_start = fml::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+      int64_t raster_start =
+          fml::TimePoint::Now().ToEpochDelta().ToNanoseconds();
       std::vector<int> view_ids;
       jni_facade_->FlutterViewAddNewFrameInfo(raster_start, view_ids);
     }
@@ -218,10 +219,8 @@ void AndroidExternalViewEmbedder::SubmitFlutterViewForFastHC(
   std::unique_ptr<SurfaceFrame> background_frame;
   {
     TRACE_EVENT0("flutter", "GetImageReaderFrame");
-    background_frame = GetImageReaderFrame(context,
-                                                   -1,
-                                                   frame_size_.width(), 
-                                                   frame_size_.height());
+    background_frame = GetImageReaderFrame(context, -1, frame_size_.width(),
+                                           frame_size_.height());
   }
   DlCanvas* background_canvas = background_frame->Canvas();
   auto current_frame_view_count = composition_order_.size();
@@ -316,17 +315,18 @@ void AndroidExternalViewEmbedder::SubmitFlutterViewForFastHC(
     const EmbeddedViewParams& params = view_params_.at(view_id);
     std::unordered_map<int64_t, SkRect>::const_iterator overlay =
         overlay_layers.find(view_id);
-    jni_facade_->FlutterViewUpdateFrameInfo(raster_start, view_id, view_rect.width(), view_rect.height(), view_rect.y(), view_rect.x(), overlay != overlay_layers.end(), params.mutatorsStack());
-    
+    jni_facade_->FlutterViewUpdateFrameInfo(
+        raster_start, view_id, view_rect.width(), view_rect.height(),
+        view_rect.y(), view_rect.x(), overlay != overlay_layers.end(),
+        params.mutatorsStack());
+
     if (overlay != overlay_layers.end()) {
-      std::unique_ptr<SurfaceFrame> frame = GetImageReaderFrame(context,
-                                                    view_id,
-                                                    view_rect.width(), 
-                                                    view_rect.height());
+      std::unique_ptr<SurfaceFrame> frame = GetImageReaderFrame(
+          context, view_id, view_rect.width(), view_rect.height());
       DlCanvas* canvas = frame->Canvas();
       canvas->Clear(DlColor::kTransparent());
-      // Offset the picture since its absolute position on the scene is determined
-      // by the position of the overlay view.
+      // Offset the picture since its absolute position on the scene is
+      // determined by the position of the overlay view.
       canvas->Translate(-view_rect.x(), -view_rect.y());
       {
         TRACE_EVENT0("flutter", "overlay render_into(canvas)");
@@ -368,13 +368,14 @@ AndroidExternalViewEmbedder::CreateSurfaceIfNeeded(GrDirectContext* context,
   return frame;
 }
 
-std::unique_ptr<SurfaceFrame> 
-  AndroidExternalViewEmbedder::GetImageReaderFrame(GrDirectContext* context,
-                                                   int64_t view_id,
-                                                   int64_t width,
-                                                   int64_t height) {
+std::unique_ptr<SurfaceFrame> AndroidExternalViewEmbedder::GetImageReaderFrame(
+    GrDirectContext* context,
+    int64_t view_id,
+    int64_t width,
+    int64_t height) {
   std::shared_ptr<OverlayLayer> layer = surface_pool_->GetImageReaderLayer(
-      context, android_context_, jni_facade_, surface_factory_, view_id, width, height);
+      context, android_context_, jni_facade_, surface_factory_, view_id, width,
+      height);
 
   std::unique_ptr<SurfaceFrame> frame =
       layer->surface->AcquireFrame(SkISize::Make(width, height));

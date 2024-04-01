@@ -1270,12 +1270,21 @@ public class FlutterJNI {
   }
 
   @SuppressWarnings("unused")
-  public void updateFrameInfo(long rasterStart, int id, int width, int height, int left, int top, boolean haveOverlay, FlutterMutatorsStack mutatorsStack) {
+  public void updateFrameInfo(
+      long rasterStart,
+      int id,
+      int width,
+      int height,
+      int left,
+      int top,
+      boolean haveOverlay,
+      FlutterMutatorsStack mutatorsStack) {
     if (platformViewsController == null) {
       throw new RuntimeException(
           "platformViewsController must be set before attempting to position an overlay surface");
     }
-    platformViewsController.updateFrameInfo(rasterStart, id, width, height, top, left, haveOverlay, mutatorsStack);
+    platformViewsController.updateFrameInfo(
+        rasterStart, id, width, height, top, left, haveOverlay, mutatorsStack);
   }
 
   @SuppressWarnings("unused")

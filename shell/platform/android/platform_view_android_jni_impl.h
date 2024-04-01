@@ -86,11 +86,20 @@ class PlatformViewAndroidJNIImpl final : public PlatformViewAndroidJNI {
   FlutterViewCreateOverlaySurface() override;
 
   std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>
-  FlutterViewCreateImageReader(int id, int width, int height, int left, int top)  override;
+  FlutterViewCreateImageReader(int id, int width, int height, int left, int top)
+      override;
 
-  void FlutterViewAddNewFrameInfo(long raster_start, const std::vector<int>& view_ids) override;
+  void FlutterViewAddNewFrameInfo(long raster_start,
+                                  const std::vector<int>& view_ids) override;
 
-  void FlutterViewUpdateFrameInfo(long rasterStart, int id, int width, int height, int left, int top, bool have_overlay, MutatorsStack mutators_stack) override;
+  void FlutterViewUpdateFrameInfo(long rasterStart,
+                                  int id,
+                                  int width,
+                                  int height,
+                                  int left,
+                                  int top,
+                                  bool have_overlay,
+                                  MutatorsStack mutators_stack) override;
 
   void FlutterViewDestroyOverlaySurfaces() override;
 

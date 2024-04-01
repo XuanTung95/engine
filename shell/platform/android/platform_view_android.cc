@@ -352,7 +352,8 @@ std::unique_ptr<Surface> PlatformViewAndroid::CreateRenderingSurface() {
 std::shared_ptr<ExternalViewEmbedder>
 PlatformViewAndroid::CreateExternalViewEmbedder() {
   return std::make_shared<AndroidExternalViewEmbedder>(
-      *android_context_, settings_, jni_facade_, surface_factory_, task_runners_);
+      *android_context_, settings_, jni_facade_, surface_factory_,
+      task_runners_);
 }
 
 // |PlatformView|

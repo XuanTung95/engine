@@ -94,9 +94,22 @@ class MockPlatformViewAndroidJNI : public PlatformViewAndroidJNI {
               FlutterViewCreateImageReader,
               (int id, int width, int height, int left, int top),
               (override));
-  MOCK_METHOD(void, FlutterViewAddNewFrameInfo, (long raster_start, const std::vector<int>& view_ids), (override));
+  MOCK_METHOD(void,
+              FlutterViewAddNewFrameInfo,
+              (long raster_start, const std::vector<int>& view_ids),
+              (override));
 
-  MOCK_METHOD(void, FlutterViewUpdateFrameInfo, (long raster_start, int id, int width, int height, int left, int top, bool have_overlay, MutatorsStack mutators_stack), (override));
+  MOCK_METHOD(void,
+              FlutterViewUpdateFrameInfo,
+              (long raster_start,
+               int id,
+               int width,
+               int height,
+               int left,
+               int top,
+               bool have_overlay,
+               MutatorsStack mutators_stack),
+              (override));
 
   MOCK_METHOD(void, FlutterViewDestroyOverlaySurfaces, (), (override));
   MOCK_METHOD(std::unique_ptr<std::vector<std::string>>,

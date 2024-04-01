@@ -122,7 +122,14 @@ class JNIMock final : public PlatformViewAndroidJNI {
               (override));
   MOCK_METHOD(void,
               FlutterViewUpdateFrameInfo,
-              (long raster_start, int id, int width, int height, int left, int top, bool have_overlay, MutatorsStack mutators_stack),
+              (long raster_start,
+               int id,
+               int width,
+               int height,
+               int left,
+               int top,
+               bool have_overlay,
+               MutatorsStack mutators_stack),
               (override));
 
   MOCK_METHOD(void, FlutterViewDestroyOverlaySurfaces, (), (override));

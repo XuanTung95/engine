@@ -59,13 +59,13 @@ class SurfacePool {
       const std::shared_ptr<AndroidSurfaceFactory>& surface_factory);
 
   std::shared_ptr<OverlayLayer> GetImageReaderLayer(
-        GrDirectContext* gr_context,
-        const AndroidContext& android_context,
-        const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
-        const std::shared_ptr<AndroidSurfaceFactory>& surface_factory,
-        int platform_view_id,
-        int width,
-        int height);
+      GrDirectContext* gr_context,
+      const AndroidContext& android_context,
+      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
+      const std::shared_ptr<AndroidSurfaceFactory>& surface_factory,
+      int platform_view_id,
+      int width,
+      int height);
 
   // Gets the layers in the pool that aren't currently used.
   // This method doesn't mark the layers as unused.
