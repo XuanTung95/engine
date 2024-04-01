@@ -115,6 +115,7 @@ AndroidShellHolder::AndroidShellHolder(
         std::unique_ptr<PlatformViewAndroid> platform_view_android;
         platform_view_android = std::make_unique<PlatformViewAndroid>(
             shell,                   // delegate
+            shell.GetSettings(),
             shell.GetTaskRunners(),  // task runners
             jni_facade,              // JNI interop
             shell.GetSettings()
@@ -244,6 +245,7 @@ std::unique_ptr<AndroidShellHolder> AndroidShellHolder::Spawn(
         std::unique_ptr<PlatformViewAndroid> platform_view_android;
         platform_view_android = std::make_unique<PlatformViewAndroid>(
             shell,                   // delegate
+            shell.GetSettings(),
             shell.GetTaskRunners(),  // task runners
             jni_facade,              // JNI interop
             android_context          // Android context

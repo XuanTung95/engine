@@ -90,12 +90,14 @@ static std::shared_ptr<flutter::AndroidContext> CreateAndroidContext(
 
 PlatformViewAndroid::PlatformViewAndroid(
     PlatformView::Delegate& delegate,
+    const Settings& settings,
     const flutter::TaskRunners& task_runners,
     const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
     bool use_software_rendering,
     uint8_t msaa_samples)
     : PlatformViewAndroid(
           delegate,
+          settings,
           task_runners,
           jni_facade,
           CreateAndroidContext(
@@ -110,12 +112,14 @@ PlatformViewAndroid::PlatformViewAndroid(
 
 PlatformViewAndroid::PlatformViewAndroid(
     PlatformView::Delegate& delegate,
+    const Settings& settings,
     const flutter::TaskRunners& task_runners,
     const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
     const std::shared_ptr<flutter::AndroidContext>& android_context)
     : PlatformView(delegate, task_runners),
       jni_facade_(jni_facade),
       android_context_(android_context),
+      settings_(settings),
       platform_view_android_delegate_(jni_facade),
       platform_message_handler_(new PlatformMessageHandlerAndroid(jni_facade)) {
   if (android_context_) {
@@ -348,7 +352,7 @@ std::unique_ptr<Surface> PlatformViewAndroid::CreateRenderingSurface() {
 std::shared_ptr<ExternalViewEmbedder>
 PlatformViewAndroid::CreateExternalViewEmbedder() {
   return std::make_shared<AndroidExternalViewEmbedder>(
-      *android_context_, jni_facade_, surface_factory_, task_runners_);
+      *android_context_, settings_, jni_facade_, surface_factory_, task_runners_);
 }
 
 // |PlatformView|

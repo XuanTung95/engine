@@ -11,7 +11,12 @@ import static io.flutter.Build.API_LEVELS;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.MutableContextWrapper;
+import android.content.pm.ApplicationInfo;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.media.ImageReader;
+import io.flutter.embedding.android.ImageReaderPlatformViewManager;
 import android.util.SparseArray;
 import android.view.MotionEvent;
 import android.view.MotionEvent.PointerCoords;
@@ -51,7 +56,8 @@ import java.util.List;
  */
 public class PlatformViewsController implements PlatformViewsAccessibilityDelegate {
   private static final String TAG = "PlatformViewsController";
-
+  private static final String ENABLE_FAST_HYBRID_COMPOSITION_DATA_KEY =
+      "io.flutter.embedding.android.EnableFastHybridComposition";
   // These view types allow out-of-band drawing commands that don't notify the Android view
   // hierarchy.
   // To support these cases, Flutter hosts the embedded view in a VirtualDisplay,
@@ -154,6 +160,10 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
 
   private static boolean enableSurfaceProducerRenderTarget = true;
 
+  private boolean enableFastHybridComposition = false;
+
+  private final ImageReaderPlatformViewManager imageReaderPlatformViewManager = new ImageReaderPlatformViewManager();
+
   private final PlatformViewsChannel.PlatformViewsHandler channelHandler =
       new PlatformViewsChannel.PlatformViewsHandler() {
 
@@ -240,6 +250,18 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
             Log.e(TAG, "Disposing unknown platform view with id: " + viewId);
             return;
           }
+          if (imageReaderPlatformViewManager.containPlatformView(viewId)) {
+            platformViews.remove(viewId);
+            viewWrappers.remove(viewId);
+            platformViewParent.remove(viewId);
+            imageReaderPlatformViewManager.disposeView(viewId);
+            try {
+              platformView.dispose();
+            } catch (RuntimeException exception) {
+              Log.e(TAG, "Disposing platform view threw an exception", exception);
+            }
+            return;
+          }
           if (platformView.getView() != null) {
             final View embeddedView = platformView.getView();
             final ViewGroup pvParent = (ViewGroup) embeddedView.getParent();
@@ -297,6 +319,9 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
 
         @Override
         public void offset(int viewId, double top, double left) {
+          if (imageReaderPlatformViewManager.containPlatformView(viewId)) {
+            return;
+          }
           if (usesVirtualDisplay(viewId)) {
             // Virtual displays don't need an accessibility offset.
             return;
@@ -329,6 +354,18 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
           final int physicalWidth = toPhysicalPixels(request.newLogicalWidth);
           final int physicalHeight = toPhysicalPixels(request.newLogicalHeight);
           final int viewId = request.viewId;
+          if (imageReaderPlatformViewManager.containPlatformView(viewId)) {
+            final PlatformViewWrapper viewWrapper = viewWrappers.get(viewId);
+            if (viewWrapper == null) {
+              Log.e(TAG, "Resizing unknown platform view with id: " + viewId);
+              return;
+            }
+            onComplete.run(
+              new PlatformViewsChannel.PlatformViewBufferSize(
+                  toLogicalPixels(viewWrapper.getRenderTargetWidth()),
+                  toLogicalPixels(viewWrapper.getRenderTargetHeight())));
+            return;
+          }
 
           if (usesVirtualDisplay(viewId)) {
             final float originalDisplayDensity = getDisplayDensity();
@@ -541,6 +578,63 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
       @NonNull PlatformViewsChannel.PlatformViewCreationRequest request) {
     enforceMinimumAndroidApiVersion(19);
     Log.i(TAG, "Using hybrid composition for platform view: " + request.viewId);
+    if (enableFastHybridComposition) {
+      configureForFastHybridComposition(platformView, request);
+    }
+  }
+
+  // Configures the view for Fast Hybrid Composition mode.
+  private void configureForFastHybridComposition(
+      @NonNull PlatformView platformView,
+      @NonNull PlatformViewsChannel.PlatformViewCreationRequest request) {
+    int viewId = request.viewId;
+    if (platformViewParent.get(viewId) != null) {
+      return;
+    }
+    final View embeddedView = platformView.getView();
+    if (embeddedView == null) {
+      throw new IllegalStateException(
+          "PlatformView#getView() returned null, but an Android view reference was expected.");
+    }
+    if (embeddedView.getParent() != null) {
+      throw new IllegalStateException(
+          "The Android view returned from PlatformView#getView() was already added to a parent"
+              + " view.");
+    }
+    final FlutterMutatorView parentView =
+        new FlutterMutatorView(
+            context, context.getResources().getDisplayMetrics().density, androidTouchProcessor);
+
+    parentView.setOnDescendantFocusChangeListener(
+        (view, hasFocus) -> {
+          if (hasFocus) {
+            platformViewsChannel.invokeViewFocused(viewId);
+          } else if (textInputPlugin != null) {
+            textInputPlugin.clearPlatformViewClient(viewId);
+          }
+        });
+
+    platformViewParent.put(viewId, parentView);
+
+    // Accessibility in the embedded view is initially disabled because if a Flutter app disabled
+    // accessibility in the first frame, the embedding won't receive an update to disable
+    // accessibility since the embedding never received an update to enable it.
+    // The AccessibilityBridge keeps track of the accessibility nodes, and handles the deltas when
+    // the framework sends a new a11y tree to the embedding.
+    // To prevent races, the framework populate the SemanticsNode after the platform view has been
+    // created.
+    embeddedView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+
+    parentView.setVisibility(View.VISIBLE);
+
+    final FrameLayout.LayoutParams layoutParams =
+        new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+    embeddedView.setLayoutParams(layoutParams);
+
+    parentView.addView(embeddedView);
+    // parentView.readyToDisplay(new FlutterMutatorsStack(), 0, 0, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+
+    imageReaderPlatformViewManager.onPlatformViewCreated(viewId, parentView);
   }
 
   // Configures the view for Virtual Display mode, returning the associated texture ID.
@@ -795,15 +889,25 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
    */
   public void attachToView(@NonNull FlutterView newFlutterView) {
     flutterView = newFlutterView;
+    ApplicationInfo applicationInfo = flutterView.getContext()
+                        .getApplicationInfo();
+    Bundle metaData = applicationInfo.metaData;
+    enableFastHybridComposition = metaData.getBoolean(ENABLE_FAST_HYBRID_COMPOSITION_DATA_KEY, false);
+    Log.e(TAG, "enableFastHybridComposition: " + enableFastHybridComposition);
+    if (enableFastHybridComposition) {
+      imageReaderPlatformViewManager.attachToView(flutterView);
+    }
     // Add wrapper for platform views that use GL texture.
     for (int index = 0; index < viewWrappers.size(); index++) {
       final PlatformViewWrapper view = viewWrappers.valueAt(index);
       flutterView.addView(view);
     }
     // Add wrapper for platform views that are composed at the view hierarchy level.
-    for (int index = 0; index < platformViewParent.size(); index++) {
-      final FlutterMutatorView view = platformViewParent.valueAt(index);
-      flutterView.addView(view);
+    if (!enableFastHybridComposition) {
+      for (int index = 0; index < platformViewParent.size(); index++) {
+        final FlutterMutatorView view = platformViewParent.valueAt(index);
+        flutterView.addView(view);
+      }
     }
     // Notify platform views that they are now attached to a FlutterView.
     for (int index = 0; index < platformViews.size(); index++) {
@@ -821,14 +925,19 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
    */
   public void detachFromView() {
     // Remove wrapper for platform views that use GL texture.
+    if (enableFastHybridComposition) {
+      imageReaderPlatformViewManager.detachFromView();
+    }
     for (int index = 0; index < viewWrappers.size(); index++) {
       final PlatformViewWrapper view = viewWrappers.valueAt(index);
       flutterView.removeView(view);
     }
     // Remove wrapper for platform views that are composed at the view hierarchy level.
-    for (int index = 0; index < platformViewParent.size(); index++) {
-      final FlutterMutatorView view = platformViewParent.valueAt(index);
-      flutterView.removeView(view);
+    if (!enableFastHybridComposition) {
+      for (int index = 0; index < platformViewParent.size(); index++) {
+        final FlutterMutatorView view = platformViewParent.valueAt(index);
+        flutterView.removeView(view);
+      }
     }
 
     destroyOverlaySurfaces();
@@ -1316,6 +1425,18 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
             flutterView.getWidth(),
             flutterView.getHeight(),
             accessibilityEventsDelegate));
+  }
+
+  public FlutterOverlaySurface createImageReader(int id, int width, int height, int left, int top) {
+      return imageReaderPlatformViewManager.createImageReader(id, width, height, left, top);
+  }
+
+  public void addNewFrameInfo(long rasterStart, int[] viewIds) {
+      imageReaderPlatformViewManager.addNewFrameInfo(rasterStart, viewIds);
+  }
+
+  public void updateFrameInfo(long rasterStart, int id, int width, int height, int left, int top, boolean haveOverlay, @NonNull FlutterMutatorsStack mutatorsStack) {
+      imageReaderPlatformViewManager.updateFrameInfo(id, rasterStart, width, height, top, left, haveOverlay, mutatorsStack);
   }
 
   /**

@@ -75,6 +75,66 @@ std::shared_ptr<OverlayLayer> SurfacePool::GetLayer(
   return layer;
 }
 
+std::shared_ptr<OverlayLayer> SurfacePool::GetImageReaderLayer(
+    GrDirectContext* gr_context,
+    const AndroidContext& android_context,
+    const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
+    const std::shared_ptr<AndroidSurfaceFactory>& surface_factory,
+    int platform_view_id,
+    int width,
+    int height
+    ) {
+  std::lock_guard lock(mutex_);
+  intptr_t gr_context_key = reinterpret_cast<intptr_t>(gr_context);
+
+  // get the old surface
+  std::shared_ptr<OverlayLayer> layer;
+  std::shared_ptr<OverlayLayer> old_layer = nullptr;
+  auto it = image_reader_layers_.find(platform_view_id);
+  if (it != image_reader_layers_.end()) {
+    old_layer = it->second;
+  }
+  // get layer from platfrom side
+  std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata> java_metadata =
+    jni_facade->FlutterViewCreateImageReader(platform_view_id, width, height, 0 , 0);
+
+  if (old_layer == nullptr || old_layer->id != java_metadata->id) {
+    std::unique_ptr<AndroidSurface> android_surface =
+        surface_factory->CreateSurface();
+    FML_CHECK(android_surface && android_surface->IsValid())
+      << "Could not create an OpenGL, Vulkan or Software surface to set up "
+          "rendering.";
+    FML_CHECK(java_metadata->window);
+    android_surface->SetNativeWindow(java_metadata->window);
+
+    std::unique_ptr<Surface> surface =
+        android_surface->CreateGPUSurface(gr_context);
+
+    layer =
+        std::make_shared<OverlayLayer>(java_metadata->id,           //
+                                       std::move(android_surface),  //
+                                       std::move(surface)           //
+        );
+    layer->gr_context_key = gr_context_key;
+    image_reader_layers_[platform_view_id] = layer;
+  } else {
+    layer = old_layer;
+  }
+  
+  // Since the surfaces are recycled, it's possible that the GrContext is
+  // different.
+  if (gr_context_key != layer->gr_context_key) {
+    layer->gr_context_key = gr_context_key;
+    // The overlay already exists, but the GrContext was changed so we need to
+    // recreate the rendering surface with the new GrContext.
+    std::unique_ptr<Surface> surface =
+        layer->android_surface->CreateGPUSurface(gr_context);
+    layer->surface = std::move(surface);
+  }
+  // current_frame_size_ = requested_frame_size_;
+  return layer;
+}
+
 void SurfacePool::RecycleLayers() {
   std::lock_guard lock(mutex_);
   available_layer_index_ = 0;

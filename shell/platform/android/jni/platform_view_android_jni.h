@@ -207,6 +207,13 @@ class PlatformViewAndroidJNI {
   virtual std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>
   FlutterViewCreateOverlaySurface() = 0;
 
+  virtual std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>
+  FlutterViewCreateImageReader(int id, int width, int height, int left, int top) = 0;
+
+  virtual void FlutterViewAddNewFrameInfo(long raster_start, const std::vector<int>& view_ids) = 0;
+
+  virtual void FlutterViewUpdateFrameInfo(long raster_start, int id, int width, int height, int left, int top, bool have_overlay, MutatorsStack mutators_stack) = 0;
+
   //----------------------------------------------------------------------------
   /// @brief      Destroys the overlay surfaces.
   ///

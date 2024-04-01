@@ -1252,6 +1252,33 @@ public class FlutterJNI {
   }
 
   @SuppressWarnings("unused")
+  public FlutterOverlaySurface createImageReader(int id, int width, int height, int left, int top) {
+    if (platformViewsController == null) {
+      throw new RuntimeException(
+          "platformViewsController must be set before attempting to position an overlay surface");
+    }
+    return platformViewsController.createImageReader(id, width, height, left, top);
+  }
+
+  @SuppressWarnings("unused")
+  public void addNewFrameInfo(long rasterStart, int[] viewIds) {
+    if (platformViewsController == null) {
+      throw new RuntimeException(
+          "platformViewsController must be set before attempting to position an overlay surface");
+    }
+    platformViewsController.addNewFrameInfo(rasterStart, viewIds);
+  }
+
+  @SuppressWarnings("unused")
+  public void updateFrameInfo(long rasterStart, int id, int width, int height, int left, int top, boolean haveOverlay, FlutterMutatorsStack mutatorsStack) {
+    if (platformViewsController == null) {
+      throw new RuntimeException(
+          "platformViewsController must be set before attempting to position an overlay surface");
+    }
+    platformViewsController.updateFrameInfo(rasterStart, id, width, height, top, left, haveOverlay, mutatorsStack);
+  }
+
+  @SuppressWarnings("unused")
   @UiThread
   public void destroyOverlaySurfaces() {
     ensureRunningOnMainThread();

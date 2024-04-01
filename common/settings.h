@@ -229,6 +229,8 @@ struct Settings {
   bool enable_impeller = false;
 #endif
 
+  bool enable_fast_hybrid_composition = false;
+
   // The selected Android rendering API.
   AndroidRenderingAPI android_rendering_api =
       AndroidRenderingAPI::kSkiaOpenGLES;

@@ -50,6 +50,8 @@ public class FlutterLoader {
       "io.flutter.embedding.android.EnableOpenGLGPUTracing";
   private static final String IMPELLER_VULKAN_GPU_TRACING_DATA_KEY =
       "io.flutter.embedding.android.EnableVulkanGPUTracing";
+  private static final String ENABLE_FAST_HYBRID_COMPOSITION_DATA_KEY =
+      "io.flutter.embedding.android.EnableFastHybridComposition";
 
   /**
    * Set whether leave or clean up the VM after the last shell shuts down. It can be set from app's
@@ -366,6 +368,9 @@ public class FlutterLoader {
         String backend = metaData.getString(IMPELLER_BACKEND_META_DATA_KEY);
         if (backend != null) {
           shellArgs.add("--impeller-backend=" + backend);
+        }
+        if (metaData.getBoolean(ENABLE_FAST_HYBRID_COMPOSITION_DATA_KEY, false)) {
+          shellArgs.add("--enable-fast-hybrid-composition");
         }
       }
 

@@ -100,6 +100,12 @@ static jmethodID g_on_engine_restart_method = nullptr;
 
 static jmethodID g_create_overlay_surface_method = nullptr;
 
+static jmethodID g_create_image_reader_method = nullptr;
+
+static jmethodID g_add_new_frame_info_method = nullptr;
+
+static jmethodID g_update_frame_info_method = nullptr;
+
 static jmethodID g_destroy_overlay_surfaces_method = nullptr;
 
 static jmethodID g_on_begin_frame_method = nullptr;
@@ -956,6 +962,34 @@ bool RegisterApi(JNIEnv* env) {
     return false;
   }
 
+  g_create_image_reader_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "createImageReader",
+                       "(IIIII)Lio/flutter/embedding/engine/FlutterOverlaySurface;");
+
+  if (g_create_image_reader_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate createImageReader method";
+    return false;
+  }
+
+  g_add_new_frame_info_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "addNewFrameInfo",
+                       "(J[I)V");
+
+  if (g_add_new_frame_info_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate addNewFrameInfo method";
+    return false;
+  }
+
+  g_update_frame_info_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "updateFrameInfo",
+                       "(JIIIIIZLio/flutter/embedding/engine/mutatorsstack/"
+                       "FlutterMutatorsStack;)V");
+
+  if (g_update_frame_info_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate updateFrameInfo method";
+    return false;
+  }
+
   g_destroy_overlay_surfaces_method = env->GetMethodID(
       g_flutter_jni_class->obj(), "destroyOverlaySurfaces", "()V");
 
@@ -1800,6 +1834,125 @@ PlatformViewAndroidJNIImpl::FlutterViewCreateOverlaySurface() {
 
   return std::make_unique<PlatformViewAndroidJNI::OverlayMetadata>(
       overlay_id, std::move(overlay_window));
+}
+
+std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>
+PlatformViewAndroidJNIImpl::FlutterViewCreateImageReader(int id, int width, int height, int left, int top) {
+  JNIEnv* env = fml::jni::AttachCurrentThread();
+
+  auto java_object = java_object_.get(env);
+  if (java_object.is_null()) {
+    return nullptr;
+  }
+
+  fml::jni::ScopedJavaLocalRef<jobject> overlay(
+      env, env->CallObjectMethod(java_object.obj(),
+                                 g_create_image_reader_method, id, width, height, left, top));
+  FML_CHECK(fml::jni::CheckException(env));
+
+  if (overlay.is_null()) {
+    return std::make_unique<PlatformViewAndroidJNI::OverlayMetadata>(0,
+                                                                     nullptr);
+  }
+
+  jint overlay_id =
+      env->CallIntMethod(overlay.obj(), g_overlay_surface_id_method);
+
+  jobject overlay_surface =
+      env->CallObjectMethod(overlay.obj(), g_overlay_surface_surface_method);
+
+  auto overlay_window = fml::MakeRefCounted<AndroidNativeWindow>(
+      ANativeWindow_fromSurface(env, overlay_surface));
+
+  return std::make_unique<PlatformViewAndroidJNI::OverlayMetadata>(
+      overlay_id, std::move(overlay_window));
+}
+
+void PlatformViewAndroidJNIImpl::FlutterViewAddNewFrameInfo(long raster_start, const std::vector<int>& view_ids) {
+  JNIEnv* env = fml::jni::AttachCurrentThread();
+
+  auto java_object = java_object_.get(env);
+  if (java_object.is_null()) {
+    return;
+  }
+  jintArray view_ids_array = env->NewIntArray(view_ids.size());
+  env->SetIntArrayRegion(view_ids_array, 0, view_ids.size(), view_ids.data());
+
+  env->CallVoidMethod(java_object.obj(), g_add_new_frame_info_method, raster_start, view_ids_array);
+
+  FML_CHECK(fml::jni::CheckException(env));
+}
+
+void PlatformViewAndroidJNIImpl::FlutterViewUpdateFrameInfo(long raster_start, int id, int width, int height, int left, int top, bool have_overlay, MutatorsStack mutators_stack) {
+  JNIEnv* env = fml::jni::AttachCurrentThread();
+
+  auto java_object = java_object_.get(env);
+  if (java_object.is_null()) {
+    return;
+  }
+
+  jobject mutatorsStack = env->NewObject(g_mutators_stack_class->obj(),
+                                         g_mutators_stack_init_method);
+
+  std::vector<std::shared_ptr<Mutator>>::const_iterator iter =
+      mutators_stack.Begin();
+  while (iter != mutators_stack.End()) {
+    switch ((*iter)->GetType()) {
+      case kTransform: {
+        const SkMatrix& matrix = (*iter)->GetMatrix();
+        SkScalar matrix_array[9];
+        matrix.get9(matrix_array);
+        fml::jni::ScopedJavaLocalRef<jfloatArray> transformMatrix(
+            env, env->NewFloatArray(9));
+
+        env->SetFloatArrayRegion(transformMatrix.obj(), 0, 9, matrix_array);
+        env->CallVoidMethod(mutatorsStack,
+                            g_mutators_stack_push_transform_method,
+                            transformMatrix.obj());
+        break;
+      }
+      case kClipRect: {
+        const SkRect& rect = (*iter)->GetRect();
+        env->CallVoidMethod(
+            mutatorsStack, g_mutators_stack_push_cliprect_method,
+            static_cast<int>(rect.left()), static_cast<int>(rect.top()),
+            static_cast<int>(rect.right()), static_cast<int>(rect.bottom()));
+        break;
+      }
+      case kClipRRect: {
+        const SkRRect& rrect = (*iter)->GetRRect();
+        const SkRect& rect = rrect.rect();
+        const SkVector& upper_left = rrect.radii(SkRRect::kUpperLeft_Corner);
+        const SkVector& upper_right = rrect.radii(SkRRect::kUpperRight_Corner);
+        const SkVector& lower_right = rrect.radii(SkRRect::kLowerRight_Corner);
+        const SkVector& lower_left = rrect.radii(SkRRect::kLowerLeft_Corner);
+        SkScalar radiis[8] = {
+            upper_left.x(),  upper_left.y(),  upper_right.x(), upper_right.y(),
+            lower_right.x(), lower_right.y(), lower_left.x(),  lower_left.y(),
+        };
+        fml::jni::ScopedJavaLocalRef<jfloatArray> radiisArray(
+            env, env->NewFloatArray(8));
+        env->SetFloatArrayRegion(radiisArray.obj(), 0, 8, radiis);
+        env->CallVoidMethod(
+            mutatorsStack, g_mutators_stack_push_cliprrect_method,
+            static_cast<int>(rect.left()), static_cast<int>(rect.top()),
+            static_cast<int>(rect.right()), static_cast<int>(rect.bottom()),
+            radiisArray.obj());
+        break;
+      }
+      // TODO(cyanglaz): Implement other mutators.
+      // https://github.com/flutter/flutter/issues/58426
+      case kClipPath:
+      case kOpacity:
+      case kBackdropFilter:
+        break;
+    }
+    ++iter;
+  }
+
+  env->CallVoidMethod(java_object.obj(), g_update_frame_info_method, raster_start, id, width, height, left, top, have_overlay, mutatorsStack);
+
+  FML_CHECK(fml::jni::CheckException(env));
 }
 
 void PlatformViewAndroidJNIImpl::FlutterViewDestroyOverlaySurfaces() {

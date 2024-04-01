@@ -58,6 +58,15 @@ class SurfacePool {
       const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
       const std::shared_ptr<AndroidSurfaceFactory>& surface_factory);
 
+  std::shared_ptr<OverlayLayer> GetImageReaderLayer(
+        GrDirectContext* gr_context,
+        const AndroidContext& android_context,
+        const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
+        const std::shared_ptr<AndroidSurfaceFactory>& surface_factory,
+        int platform_view_id,
+        int width,
+        int height);
+
   // Gets the layers in the pool that aren't currently used.
   // This method doesn't mark the layers as unused.
   std::vector<std::shared_ptr<OverlayLayer>> GetUnusedLayers();
@@ -93,6 +102,8 @@ class SurfacePool {
 
   // The layers in the pool.
   std::vector<std::shared_ptr<OverlayLayer>> layers_;
+
+  std::map<int, std::shared_ptr<OverlayLayer>> image_reader_layers_;
 
   // The frame size of the layers in the pool.
   SkISize current_frame_size_;

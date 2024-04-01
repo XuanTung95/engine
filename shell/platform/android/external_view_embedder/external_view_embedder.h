@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "flutter/common/task_runners.h"
+#include "flutter/common/settings.h"
 #include "flutter/flow/embedded_views.h"
 #include "flutter/shell/platform/android/context/android_context.h"
 #include "flutter/shell/platform/android/external_view_embedder/surface_pool.h"
@@ -30,6 +31,7 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
  public:
   AndroidExternalViewEmbedder(
       const AndroidContext& android_context,
+      const Settings& settings,
       std::shared_ptr<PlatformViewAndroidJNI> jni_facade,
       std::shared_ptr<AndroidSurfaceFactory> surface_factory,
       const TaskRunners& task_runners);
@@ -82,6 +84,10 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
   // on the screen.
   SkRect GetViewRect(int64_t view_id) const;
 
+  const Settings& GetSettings() const {
+    return settings_;
+  }
+
  private:
   // The number of frames the rasterizer task runner will continue
   // to run on the platform thread after no platform view is rendered.
@@ -92,6 +98,8 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
 
   // Provides metadata to the Android surfaces.
   const AndroidContext& android_context_;
+
+  const Settings& settings_;
 
   // Allows to call methods in Java.
   const std::shared_ptr<PlatformViewAndroidJNI> jni_facade_;
@@ -128,6 +136,8 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
   // The number of platform views in the previous frame.
   int64_t previous_frame_view_count_;
 
+  int64_t pending_revert_frame_count_ = 0;
+
   // Destroys the surfaces created from the surface factory.
   // This method schedules a task on the platform thread, and waits for
   // the task until it completes.
@@ -145,6 +155,16 @@ class AndroidExternalViewEmbedder final : public ExternalViewEmbedder {
                                                       int64_t view_id,
                                                       EmbedderViewSlice* slice,
                                                       const SkRect& rect);
+
+  std::unique_ptr<SurfaceFrame> GetImageReaderFrame(GrDirectContext* context,
+                                                   int64_t view_id,
+                                                   int64_t width,
+                                                   int64_t height);
+
+  void SubmitFlutterViewForFastHC(
+      GrDirectContext* context,
+      const std::shared_ptr<impeller::AiksContext>& aiks_context,
+      std::unique_ptr<SurfaceFrame> frame);
 };
 
 }  // namespace flutter

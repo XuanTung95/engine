@@ -44,6 +44,7 @@ class PlatformViewAndroid final : public PlatformView {
   static bool Register(JNIEnv* env);
 
   PlatformViewAndroid(PlatformView::Delegate& delegate,
+                      const Settings& settings,
                       const flutter::TaskRunners& task_runners,
                       const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
                       bool use_software_rendering,
@@ -56,6 +57,7 @@ class PlatformViewAndroid final : public PlatformView {
   ///
   PlatformViewAndroid(
       PlatformView::Delegate& delegate,
+      const Settings& settings,
       const flutter::TaskRunners& task_runners,
       const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
       const std::shared_ptr<flutter::AndroidContext>& android_context);
@@ -123,6 +125,9 @@ class PlatformViewAndroid final : public PlatformView {
  private:
   const std::shared_ptr<PlatformViewAndroidJNI> jni_facade_;
   std::shared_ptr<AndroidContext> android_context_;
+
+  const Settings& settings_;
+
   std::shared_ptr<AndroidSurfaceFactoryImpl> surface_factory_;
 
   PlatformViewAndroidDelegate platform_view_android_delegate_;
